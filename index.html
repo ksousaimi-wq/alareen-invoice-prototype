@@ -1,0 +1,1633 @@
+<!DOCTYPE html>
+<html lang="ar" dir="rtl">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>نظام التحقق من فواتير مقاولي الباطن — اتحاد العرين للمقاولات</title>
+<style>
+/* ── minimal reset (Tailwind-preflight equivalent) ───────────────────── */
+*,::before,::after{box-sizing:border-box;border-width:0;border-style:solid;border-color:#e5e7eb}
+html{-webkit-text-size-adjust:100%;line-height:1.5}
+body{margin:0;line-height:inherit}
+h1,h2,h3,h4,h5,h6,p,figure{margin:0;font-size:inherit;font-weight:inherit}
+a{color:inherit;text-decoration:inherit}
+button,input,select,textarea{font-family:inherit;font-size:100%;font-weight:inherit;line-height:inherit;color:inherit;margin:0;padding:0}
+button{background-color:transparent;background-image:none;cursor:pointer;text-align:inherit}
+button:disabled{cursor:default}
+input::placeholder,textarea::placeholder{color:#9ca3af;opacity:1}
+table{border-collapse:collapse;border-color:inherit;text-indent:0}
+svg{display:block;vertical-align:middle}
+[type=checkbox],[type=radio]{accent-color:#215557}
+
+/* Utility subset generated for this prototype — Tailwind-compatible class names,
+   inlined so the page is fully self-contained (no CDN, no external fonts). */
+.-right-8{right:-2rem}
+.absolute{position:absolute}
+.backdrop-blur-\[2px\]{backdrop-filter:blur(2px)}
+.bg-amber-100{background-color:#fef3c7}
+.bg-amber-50{background-color:#fffbeb}
+.bg-amber-500{background-color:#f59e0b}
+.bg-black\/50{background-color:rgba(0,0,0,0.5)}
+.bg-blue-100{background-color:#dbeafe}
+.bg-brand-100{background-color:#d4e6e6}
+.bg-brand-50{background-color:#eef5f5}
+.bg-brand-50\/50{background-color:rgba(238,245,245,0.5)}
+.bg-brand-600{background-color:#215557}
+.bg-brand-700{background-color:#1a4849}
+.bg-brand-800{background-color:#163d3f}
+.bg-brand-900{background-color:#0f3133}
+.bg-emerald-100{background-color:#d1fae5}
+.bg-emerald-50{background-color:#ecfdf5}
+.bg-emerald-500{background-color:#10b981}
+.bg-gold-500{background-color:#d4941a}
+.bg-red-100{background-color:#fee2e2}
+.bg-red-50{background-color:#fef2f2}
+.bg-red-50\/60{background-color:rgba(254,242,242,0.6)}
+.bg-red-500{background-color:#ef4444}
+.bg-red-600{background-color:#dc2626}
+.bg-slate-100{background-color:#f1f5f9}
+.bg-slate-200{background-color:#e2e8f0}
+.bg-slate-300{background-color:#cbd5e1}
+.bg-slate-400{background-color:#94a3b8}
+.bg-slate-50{background-color:#f8fafc}
+.bg-slate-900{background-color:#0f172a}
+.bg-white{background-color:#ffffff}
+.bg-white\/10{background-color:rgba(255,255,255,0.1)}
+.border{border-width:1px;border-style:solid}
+.border-2{border-width:2px;border-style:solid}
+.border-amber-200{border-color:#fde68a}
+.border-amber-300{border-color:#fcd34d}
+.border-amber-400{border-color:#fbbf24}
+.border-b{border-bottom-width:1px;border-bottom-style:solid}
+.border-b-2{border-bottom-width:2px;border-bottom-style:solid}
+.border-brand-200{border-color:#a9cccd}
+.border-brand-300{border-color:#75abad}
+.border-brand-700{border-color:#1a4849}
+.border-brand-800{border-color:#163d3f}
+.border-dashed{border-style:dashed}
+.border-emerald-200{border-color:#a7f3d0}
+.border-l{border-left-width:1px;border-left-style:solid}
+.border-red-200{border-color:#fecaca}
+.border-red-300{border-color:#fca5a5}
+.border-red-400{border-color:#f87171}
+.border-slate-100{border-color:#f1f5f9}
+.border-slate-200{border-color:#e2e8f0}
+.border-slate-300{border-color:#cbd5e1}
+.border-slate-400{border-color:#94a3b8}
+.border-slate-800{border-color:#1e293b}
+.border-t{border-top-width:1px;border-top-style:solid}
+.border-transparent{border-color:transparent}
+.border-white\/10{border-color:rgba(255,255,255,0.1)}
+.bottom-2{bottom:0.5rem}
+.cursor-not-allowed{cursor:not-allowed}
+.cursor-pointer{cursor:pointer}
+.fixed{position:fixed}
+.flex-1{flex:1 1 0%}
+.flex-col{flex-direction:column}
+.flex-wrap{flex-wrap:wrap}
+.font-bold{font-weight:700}
+.font-extrabold{font-weight:800}
+.font-semibold{font-weight:600}
+.gap-1{gap:0.25rem}
+.gap-1\.5{gap:0.375rem}
+.gap-2{gap:0.5rem}
+.gap-2\.5{gap:0.625rem}
+.gap-3{gap:0.75rem}
+.gap-4{gap:1rem}
+.grid-cols-1{grid-template-columns:repeat(1,minmax(0,1fr))}
+.grid-cols-2{grid-template-columns:repeat(2,minmax(0,1fr))}
+.grid-cols-3{grid-template-columns:repeat(3,minmax(0,1fr))}
+.grid-cols-4{grid-template-columns:repeat(4,minmax(0,1fr))}
+.h-0\.5{height:0.125rem}
+.h-1\.5{height:0.375rem}
+.h-10{height:2.5rem}
+.h-12{height:3rem}
+.h-14{height:3.5rem}
+.h-16{height:4rem}
+.h-2{height:0.5rem}
+.h-2\.5{height:0.625rem}
+.h-3{height:0.75rem}
+.h-4{height:1rem}
+.h-4\.5{height:1.125rem}
+.h-5{height:1.25rem}
+.h-6{height:1.5rem}
+.h-7{height:1.75rem}
+.h-9{height:2.25rem}
+.h-\[94vh\]{height:94vh}
+.h-full{height:100%}
+.inset-0{top:0;right:0;bottom:0;left:0}
+.items-center{align-items:center}
+.items-start{align-items:flex-start}
+.justify-between{justify-content:space-between}
+.justify-center{justify-content:center}
+.justify-end{justify-content:flex-end}
+.leading-none{line-height:1}
+.leading-relaxed{line-height:1.625}
+.leading-tight{line-height:1.25}
+.left-0\.5{left:0.125rem}
+.max-h-\[92vh\]{max-height:92vh}
+.max-h-\[94vh\]{max-height:94vh}
+.max-w-2xl{max-width:42rem}
+.max-w-3xl{max-width:48rem}
+.max-w-4xl{max-width:56rem}
+.max-w-6xl{max-width:72rem}
+.max-w-7xl{max-width:80rem}
+.max-w-lg{max-width:32rem}
+.max-w-sm{max-width:24rem}
+.max-w-xs{max-width:20rem}
+.mb-0\.5{margin-bottom:0.125rem}
+.mb-1{margin-bottom:0.25rem}
+.mb-1\.5{margin-bottom:0.375rem}
+.mb-2{margin-bottom:0.5rem}
+.mb-3{margin-bottom:0.75rem}
+.mb-4{margin-bottom:1rem}
+.mb-5{margin-bottom:1.25rem}
+.mb-6{margin-bottom:1.5rem}
+.mb-8{margin-bottom:2rem}
+.min-h-screen{min-height:100vh}
+.min-w-0{min-width:0px}
+.min-w-\[200px\]{min-width:200px}
+.mt-0\.5{margin-top:0.125rem}
+.mt-1{margin-top:0.25rem}
+.mt-2{margin-top:0.5rem}
+.mt-3{margin-top:0.75rem}
+.mt-4{margin-top:1rem}
+.mt-5{margin-top:1.25rem}
+.mt-6{margin-top:1.5rem}
+.mx-auto{margin-left:auto;margin-right:auto}
+.opacity-10{opacity:0.1}
+.opacity-60{opacity:0.6}
+.outline-none{outline:2px solid transparent;outline-offset:2px}
+.overflow-hidden{overflow:hidden}
+.overflow-y-auto{overflow-y:auto}
+.p-1\.5{padding:0.375rem}
+.p-10{padding:2.5rem}
+.p-12{padding:3rem}
+.p-2{padding:0.5rem}
+.p-2\.5{padding:0.625rem}
+.p-3{padding:0.75rem}
+.p-4{padding:1rem}
+.p-5{padding:1.25rem}
+.p-6{padding:1.5rem}
+.p-7{padding:1.75rem}
+.pb-1\.5{padding-bottom:0.375rem}
+.pb-3{padding-bottom:0.75rem}
+.pl-3{padding-left:0.75rem}
+.pl-4{padding-left:1rem}
+.pl-6{padding-left:1.5rem}
+.pr-11{padding-right:2.75rem}
+.pr-8{padding-right:2rem}
+.pr-9{padding-right:2.25rem}
+.pt-3{padding-top:0.75rem}
+.px-1\.5{padding-left:0.375rem;padding-right:0.375rem}
+.px-2{padding-left:0.5rem;padding-right:0.5rem}
+.px-2\.5{padding-left:0.625rem;padding-right:0.625rem}
+.px-3{padding-left:0.75rem;padding-right:0.75rem}
+.px-3\.5{padding-left:0.875rem;padding-right:0.875rem}
+.px-4{padding-left:1rem;padding-right:1rem}
+.px-5{padding-left:1.25rem;padding-right:1.25rem}
+.px-6{padding-left:1.5rem;padding-right:1.5rem}
+.py-0\.5{padding-top:0.125rem;padding-bottom:0.125rem}
+.py-1{padding-top:0.25rem;padding-bottom:0.25rem}
+.py-1\.5{padding-top:0.375rem;padding-bottom:0.375rem}
+.py-16{padding-top:4rem;padding-bottom:4rem}
+.py-2{padding-top:0.5rem;padding-bottom:0.5rem}
+.py-2\.5{padding-top:0.625rem;padding-bottom:0.625rem}
+.py-3{padding-top:0.75rem;padding-bottom:0.75rem}
+.py-3\.5{padding-top:0.875rem;padding-bottom:0.875rem}
+.py-4{padding-top:1rem;padding-bottom:1rem}
+.relative{position:relative}
+.right-0\.5{right:0.125rem}
+.right-3{right:0.75rem}
+.right-4{right:1rem}
+.right-\[11px\]{right:11px}
+.rounded{border-radius:0.25rem}
+.rounded-2xl{border-radius:1rem}
+.rounded-full{border-radius:9999px}
+.rounded-lg{border-radius:0.5rem}
+.rounded-xl{border-radius:0.75rem}
+.self-center{align-self:center}
+.shadow-2xl{box-shadow:0 25px 50px -12px rgba(0,0,0,.25)}
+.shrink-0{flex-shrink:0}
+.space-x-1>*+*{margin-inline-start:0.25rem}
+.space-x-reverse{}
+.space-y-1>*+*{margin-top:0.25rem}
+.space-y-2>*+*{margin-top:0.5rem}
+.space-y-2\.5>*+*{margin-top:0.625rem}
+.space-y-3>*+*{margin-top:0.75rem}
+.space-y-4>*+*{margin-top:1rem}
+.space-y-7>*+*{margin-top:1.75rem}
+.text-2xl{font-size:1.5rem;line-height:2rem}
+.text-3xl{font-size:1.875rem;line-height:2.25rem}
+.text-4xl{font-size:2.25rem;line-height:2.5rem}
+.text-5xl{font-size:3rem;line-height:1}
+.text-\[10px\]{font-size:10px}
+.text-\[11px\]{font-size:11px}
+.text-\[12px\]{font-size:12px}
+.text-\[13px\]{font-size:13px}
+.text-\[9px\]{font-size:9px}
+.text-amber-600{color:#d97706}
+.text-amber-700{color:#b45309}
+.text-amber-800{color:#92400e}
+.text-amber-900{color:#78350f}
+.text-base{font-size:1rem;line-height:1.5rem}
+.text-blue-700{color:#1d4ed8}
+.text-brand-100{color:#d4e6e6}
+.text-brand-200{color:#a9cccd}
+.text-brand-300{color:#75abad}
+.text-brand-400{color:#48898b}
+.text-brand-700{color:#1a4849}
+.text-brand-800{color:#163d3f}
+.text-brand-900{color:#0f3133}
+.text-center{text-align:center}
+.text-emerald-600{color:#059669}
+.text-emerald-700{color:#047857}
+.text-emerald-800{color:#065f46}
+.text-left{text-align:left}
+.text-lg{font-size:1.125rem;line-height:1.75rem}
+.text-red-500{color:#ef4444}
+.text-red-600{color:#dc2626}
+.text-red-700{color:#b91c1c}
+.text-red-800{color:#991b1b}
+.text-red-900{color:#7f1d1d}
+.text-right{text-align:right}
+.text-slate-300{color:#cbd5e1}
+.text-slate-400{color:#94a3b8}
+.text-slate-500{color:#64748b}
+.text-slate-600{color:#475569}
+.text-slate-700{color:#334155}
+.text-slate-800{color:#1e293b}
+.text-sm{font-size:0.875rem;line-height:1.25rem}
+.text-white{color:#ffffff}
+.text-xl{font-size:1.25rem;line-height:1.75rem}
+.text-xs{font-size:0.75rem;line-height:1rem}
+.top-0\.5{top:0.125rem}
+.top-1{top:0.25rem}
+.top-2{top:0.5rem}
+.top-2\.5{top:0.625rem}
+.top-3\.5{top:0.875rem}
+.tracking-wide{letter-spacing:.025em}
+.transition{transition-property:color,background-color,border-color,fill,stroke,opacity,box-shadow,transform;transition-timing-function:cubic-bezier(.4,0,.2,1);transition-duration:150ms}
+.truncate{overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.w-0\.5{width:0.125rem}
+.w-1\/2{width:50%}
+.w-10{width:2.5rem}
+.w-11{width:2.75rem}
+.w-12{width:3rem}
+.w-14{width:3.5rem}
+.w-16{width:4rem}
+.w-2{width:0.5rem}
+.w-28{width:7rem}
+.w-32{width:8rem}
+.w-4{width:1rem}
+.w-4\.5{width:1.125rem}
+.w-44{width:11rem}
+.w-5{width:1.25rem}
+.w-6{width:1.5rem}
+.w-64{width:16rem}
+.w-7{width:1.75rem}
+.w-72{width:18rem}
+.w-8{width:2rem}
+.w-9{width:2.25rem}
+.w-full{width:100%}
+.whitespace-nowrap{white-space:nowrap}
+.z-50{z-index:50}
+.block{display:block}
+.flex{display:flex}
+.grid{display:grid}
+.hidden{display:none}
+.inline-block{display:inline-block}
+.hover\:bg-brand-100:hover{background-color:#d4e6e6}
+.hover\:bg-brand-900:hover{background-color:#0f3133}
+.hover\:bg-slate-100:hover{background-color:#f1f5f9}
+.hover\:bg-slate-50:hover{background-color:#f8fafc}
+.hover\:bg-white\/10:hover{background-color:rgba(255,255,255,0.1)}
+.hover\:text-slate-700:hover{color:#334155}
+.hover\:text-white:hover{color:#ffffff}
+.hover\:underline:hover{text-decoration-line:underline}
+.focus\:ring-2:focus{box-shadow:0 0 0 2px var(--ring,#a9cccd)}
+.focus\:ring-brand-300:focus{--ring:#75abad}
+.focus\:ring-brand-500:focus{--ring:#2d6e70}
+@media (min-width:640px){
+  .sm\:grid-cols-2{grid-template-columns:repeat(2,minmax(0,1fr))}
+  .sm\:grid-cols-3{grid-template-columns:repeat(3,minmax(0,1fr))}
+}
+@media (min-width:768px){
+  .md\:flex{display:flex}
+  .md\:w-1\/2{width:50%}
+}
+@media (min-width:1024px){
+  .lg\:block{display:block}
+  .lg\:col-span-2{grid-column:span 2/span 2}
+  .lg\:grid-cols-2{grid-template-columns:repeat(2,minmax(0,1fr))}
+  .lg\:grid-cols-3{grid-template-columns:repeat(3,minmax(0,1fr))}
+  .lg\:grid-cols-5{grid-template-columns:repeat(5,minmax(0,1fr))}
+}
+@media (min-width:1280px){
+  .xl\:grid-cols-4{grid-template-columns:repeat(4,minmax(0,1fr))}
+}
+
+</style>
+<style>
+  body{font-family:'Cairo','Noto Kufi Arabic','Segoe UI',Tahoma,Arial,sans-serif;background:#f4f6f8;color:#1e293b}
+  .screen.hidden,.page.hidden,#modal.hidden{display:none}
+  @keyframes fade{from{opacity:0;transform:translateY(8px)}to{opacity:1;transform:none}}
+  .fade{animation:fade .22s ease}
+  .nav-item.active{background:#0f3133;color:#fff}
+  ::-webkit-scrollbar{width:9px;height:9px}
+  ::-webkit-scrollbar-thumb{background:#c8d2d6;border-radius:8px}
+  .doc-page{background:#fff;box-shadow:0 1px 3px rgba(0,0,0,.12)}
+  .hl{outline:2px solid #d4941a;outline-offset:2px;background:#faf0d8}
+  table.tbl th{background:#f1f5f7;font-weight:700;color:#334155}
+  table.tbl td,table.tbl th{border-bottom:1px solid #e8edf0;padding:.6rem .75rem;text-align:right}
+  table.tbl tbody tr:hover{background:#f8fafb}
+  .tab.active{border-color:#0f3133;color:#0f3133;font-weight:700}
+  input,select,textarea{font-family:inherit}
+</style>
+</head>
+<body class="text-slate-800">
+
+<!-- ══════════════════════ LOGIN ══════════════════════ -->
+<div id="scr-login" class="screen min-h-screen flex">
+  <div class="hidden md:flex w-1/2 bg-brand-900 text-white flex-col justify-between p-12 relative overflow-hidden">
+    <div class="absolute inset-0 opacity-10" style="background-image:radial-gradient(circle at 20% 20%,#fff 1px,transparent 1px);background-size:26px 26px"></div>
+    <div class="relative flex items-center gap-3">
+      <div class="w-14 h-14 rounded-2xl bg-white flex items-center justify-center text-brand-900">
+        <svg viewBox="0 0 118 120" class="w-9 h-9" fill="currentColor"><path fill-rule="evenodd" d="M16 8 H70 C94 8 108 22 108 44 C108 62 96 74 79 76 L108 114 H80 L52 76 H34 V114 H16 Z M34 26 H68 C80 26 88 33 88 44 C88 55 80 60 68 60 H34 Z"/></svg>
+      </div>
+      <div>
+        <div class="font-extrabold text-xl">اتحاد العرين للمقاولات</div>
+        <div class="text-brand-200 text-sm tracking-wide">AL AREEN UNION CONTRACTING CO.</div>
+      </div>
+    </div>
+    <div class="relative space-y-7">
+      <h1 class="text-3xl font-extrabold leading-relaxed">التحقق من فواتير مقاولي الباطن<br>ومطابقتها ببنود العقد آلياً</h1>
+      <div class="grid grid-cols-2 gap-2 text-sm" id="login-modules"></div>
+    </div>
+    <div class="relative text-brand-300 text-xs">المرحلة صفر — نموذج أولي للعرض والمراجعة · لا يحتوي بيانات حقيقية</div>
+  </div>
+
+  <div class="w-full md:w-1/2 flex items-center justify-center p-6 bg-white">
+    <div class="w-full max-w-sm">
+      <div class="text-center mb-8">
+        <h2 class="text-2xl font-extrabold text-brand-800">تسجيل الدخول</h2>
+        <p class="text-slate-500 text-sm mt-1">اختر الدور لتجربة الصلاحيات المختلفة</p>
+      </div>
+      <label class="block text-sm font-semibold text-slate-600 mb-1">البريد الإلكتروني</label>
+      <input class="w-full border border-slate-300 rounded-xl px-4 py-2.5 mb-4 focus:ring-2 focus:ring-brand-500 outline-none" value="reviewer@alareen.sa">
+      <label class="block text-sm font-semibold text-slate-600 mb-1">كلمة المرور</label>
+      <input type="password" class="w-full border border-slate-300 rounded-xl px-4 py-2.5 mb-5 focus:ring-2 focus:ring-brand-500 outline-none" value="••••••••">
+      <label class="block text-sm font-semibold text-slate-600 mb-2">الدور (نموذج أولي)</label>
+      <div id="role-picker" class="grid grid-cols-3 gap-2 mb-6"></div>
+      <button onclick="login()" class="w-full bg-brand-800 hover:bg-brand-900 text-white font-bold py-3 rounded-xl transition">دخول</button>
+      <p class="text-xs text-slate-400 mt-6 text-center leading-relaxed">في الإصدار الإنتاجي: مصادقة عبر Supabase Auth<br>مع سياسات RLS لكل دور</p>
+    </div>
+  </div>
+</div>
+
+<!-- ══════════════════════ APP ══════════════════════ -->
+<div id="scr-app" class="screen hidden min-h-screen flex">
+  <!-- sidebar -->
+  <aside class="w-64 shrink-0 bg-brand-800 text-white flex flex-col">
+    <div class="p-5 flex items-center gap-2.5 border-b border-white/10">
+      <div class="w-10 h-10 rounded-xl bg-white flex items-center justify-center text-brand-900">
+        <svg viewBox="0 0 118 120" class="w-6 h-6" fill="currentColor"><path fill-rule="evenodd" d="M16 8 H70 C94 8 108 22 108 44 C108 62 96 74 79 76 L108 114 H80 L52 76 H34 V114 H16 Z M34 26 H68 C80 26 88 33 88 44 C88 55 80 60 68 60 H34 Z"/></svg>
+      </div>
+      <div class="leading-tight">
+        <div class="font-extrabold text-sm">اتحاد العرين</div>
+        <div class="text-brand-300 text-[11px]">نظام الفواتير</div>
+      </div>
+    </div>
+    <nav id="nav" class="flex-1 p-3 space-y-1 overflow-y-auto text-sm"></nav>
+    <div class="p-3 border-t border-white/10">
+      <div id="user-chip" class="flex items-center gap-2.5 px-2 py-2"></div>
+      <button onclick="logout()" class="w-full mt-1 text-xs text-brand-300 hover:text-white py-1.5">تسجيل الخروج</button>
+    </div>
+  </aside>
+
+  <!-- main -->
+  <div class="flex-1 flex flex-col min-w-0">
+    <header class="h-16 bg-white border-b border-slate-200 flex items-center justify-between px-6 gap-4">
+      <div class="flex items-center gap-3 min-w-0">
+        <h1 id="page-title" class="text-lg font-extrabold text-brand-800 truncate">لوحة المعلومات</h1>
+        <span id="page-sub" class="text-sm text-slate-400 truncate"></span>
+      </div>
+      <div class="flex items-center gap-2">
+        <div class="relative hidden lg:block">
+          <input onkeydown="if(event.key==='Enter'){go('archive');document.getElementById('q').value=this.value;runSearch()}"
+                 placeholder="بحث سريع… رقم فاتورة، مورد، بند"
+                 class="w-72 bg-slate-100 rounded-xl pr-9 pl-3 py-2 text-sm outline-none focus:ring-2 focus:ring-brand-300">
+          <svg class="w-4 h-4 absolute right-3 top-2.5 text-slate-400" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><circle cx="11" cy="11" r="7"/><path d="m20 20-3.5-3.5"/></svg>
+        </div>
+        <button onclick="toggleCal()" id="cal-btn" class="text-xs font-bold border border-slate-300 rounded-lg px-3 py-2 hover:bg-slate-50">ميلادي / هجري</button>
+        <button onclick="toggleLang()" id="lang-btn" class="text-xs font-bold border border-slate-300 rounded-lg px-3 py-2 hover:bg-slate-50">EN</button>
+        <button onclick="openUpload()" class="bg-brand-800 hover:bg-brand-900 text-white text-sm font-bold rounded-xl px-4 py-2 flex items-center gap-1.5" data-role="admin,reviewer">
+          <svg class="w-4 h-4" fill="none" stroke="currentColor" stroke-width="2.2" viewBox="0 0 24 24"><path d="M12 5v14M5 12h14"/></svg>
+          رفع فاتورة
+        </button>
+      </div>
+    </header>
+    <main id="view" class="flex-1 overflow-y-auto p-6"></main>
+  </div>
+</div>
+
+<!-- ══════════════════════ MODAL HOST ══════════════════════ -->
+<div id="modal" class="hidden fixed inset-0 z-50 bg-black/50 backdrop-blur-[2px] flex items-center justify-center p-4" onclick="if(event.target===this)closeModal()">
+  <div id="modal-box" class="bg-white rounded-2xl shadow-2xl max-h-[94vh] overflow-hidden flex flex-col fade"></div>
+</div>
+
+<script>
+/* ═══════════════════════════════════════════════════════════════════════════
+   نموذج أولي — بيانات تجريبية فقط (لا يوجد أي اتصال بقاعدة بيانات)
+   Phase 0 prototype. All data below is fabricated demo data.
+   ═══════════════════════════════════════════════════════════════════════════ */
+
+document.documentElement.dir = 'rtl';
+document.documentElement.lang = 'ar';
+
+/* ── formatting helpers ─────────────────────────────────────────────────── */
+let CAL = 'g';      // 'g' gregorian | 'h' hijri | 'b' both
+let LANG = 'ar';
+const fmtMoney = n => new Intl.NumberFormat('ar-SA',{style:'currency',currency:'SAR',maximumFractionDigits:2}).format(n||0);
+const fmtNum   = n => new Intl.NumberFormat('ar-SA',{maximumFractionDigits:3}).format(n||0);
+const fmtPct   = n => new Intl.NumberFormat('ar-SA',{maximumFractionDigits:2}).format(n||0)+'٪';
+const gFmt = new Intl.DateTimeFormat('ar-SA-u-ca-gregory-nu-latn',{day:'2-digit',month:'short',year:'numeric'});
+const hFmt = new Intl.DateTimeFormat('ar-SA-u-ca-islamic-umalqura-nu-latn',{day:'2-digit',month:'short',year:'numeric'});
+function dt(iso){
+  if(!iso) return '—';
+  const d = new Date(iso+'T00:00:00');
+  if(CAL==='g') return gFmt.format(d);
+  if(CAL==='h') return hFmt.format(d)+' هـ';
+  return gFmt.format(d)+' · '+hFmt.format(d)+' هـ';
+}
+function dtBoth(iso){const d=new Date(iso+'T00:00:00');return gFmt.format(d)+' م · '+hFmt.format(d)+' هـ';}
+
+/* ── demo database ──────────────────────────────────────────────────────── */
+const USERS = [
+  {id:'u1', name:'خالد العصيمي',  email:'admin@alareen.sa',    role:'admin',    title:'مدير النظام'},
+  {id:'u2', name:'سارة الدوسري',  email:'reviewer@alareen.sa', role:'reviewer', title:'محاسبة مراجعة'},
+  {id:'u3', name:'محمد الشمري',   email:'m.shamri@alareen.sa', role:'reviewer', title:'محاسب مراجع'},
+  {id:'u4', name:'نورة القحطاني', email:'viewer@alareen.sa',   role:'viewer',   title:'مطّلع — إدارة المشاريع'}
+];
+const ROLE_AR = {admin:'مدير', reviewer:'محاسب مراجع', viewer:'مطّلع'};
+
+const PROJECTS = [
+  {id:'P-001', name:'أبراج العرين السكنية', nameEn:'Al Areen Residential Towers', city:'الرياض', client:'شركة العرين للتطوير العقاري', start:'2025-02-01', end:'2027-01-31', budget:48000000},
+  {id:'P-002', name:'مجمع النخيل التجاري',  nameEn:'Al Nakheel Commercial Complex', city:'جدة',  client:'مجموعة النخيل القابضة',        start:'2025-05-15', end:'2026-12-31', budget:26500000}
+];
+
+const SUBS = [
+  {id:'S-01', name:'مؤسسة البناء المتين للمقاولات', nameEn:'Al Bina Al Mateen Contracting Est.', cr:'1010234567', vat:'310234567800003', phone:'011-4567890', iban:'SA03 8000 0000 6080 1016 7519', status:'نشط'},
+  {id:'S-02', name:'شركة الأساس الحديث المحدودة',   nameEn:'Modern Foundation Co. Ltd.',        cr:'4030112233', vat:'300112233400003', phone:'012-6789012', iban:'SA44 2000 0001 2345 6789 1234', status:'نشط'},
+  {id:'S-03', name:'مؤسسة الإنشاءات الوطنية',       nameEn:'National Construction Est.',        cr:'1010998877', vat:'31099887760003',  phone:'011-2345678', iban:'SA71 1000 0004 5678 9012 3456', status:'قيد المراجعة'}
+];
+
+const CONTRACTS = [
+  {id:'C-2025-014', proj:'P-001', sub:'S-01', title:'أعمال الخرسانة والهيكل الإنشائي', value:12400000, start:'2025-03-01', end:'2026-06-30', retention:10, advance:15, signed:'2025-02-18', status:'ساري'},
+  {id:'C-2025-027', proj:'P-002', sub:'S-02', title:'أعمال الكهرباء والتمديدات',      value:6750000,  start:'2025-06-15', end:'2026-09-30', retention:5,  advance:10, signed:'2025-06-02', status:'ساري'}
+];
+
+/* BoQ — invoicedQty = الكمية المفوترة المعتمدة تراكمياً حتى الآن */
+const BOQ = {
+ 'C-2025-014':[
+  {code:'CN-001', ar:'توريد وصب خرسانة مسلحة جاهزة C35',            en:'Supply & pour RC concrete C35',       unit:'م³', qty:8500,  price:285.00,  invoicedQty:8120},
+  {code:'CN-002', ar:'حديد تسليح عالي المقاومة قطر ١٢–٢٥ مم',        en:'High tensile rebar Ø12–25mm',         unit:'طن', qty:950,   price:3150.00, invoicedQty:615},
+  {code:'CN-003', ar:'أعمال الشدة الخشبية للأسقف والأعمدة',          en:'Formwork for slabs & columns',        unit:'م²', qty:24000, price:62.50,   invoicedQty:12400},
+  {code:'CN-004', ar:'عزل مائي للأساسات بمادة البيتومين',            en:'Bituminous waterproofing — foundations', unit:'م²', qty:6200, price:48.00, invoicedQty:2900},
+  {code:'CN-005', ar:'أعمال الحفر والردم والدك الميكانيكي',          en:'Excavation, backfill & compaction',   unit:'م³', qty:15000, price:22.75,   invoicedQty:9150}
+ ],
+ 'C-2025-027':[
+  {code:'EL-101', ar:'توريد وتمديد كابل نحاس معزول ٤×٩٥ مم²',        en:'Supply & lay Cu cable 4×95mm²',       unit:'م.ط', qty:4200, price:118.00,   invoicedQty:2180},
+  {code:'EL-102', ar:'لوحة توزيع رئيسية ٤٠٠ أمبير',                  en:'Main distribution board 400A',        unit:'عدد', qty:12,   price:18500.00, invoicedQty:7},
+  {code:'EL-103', ar:'نقطة إنارة كاملة شاملة المواد والتركيب',       en:'Complete lighting point',             unit:'نقطة', qty:3800, price:95.00,   invoicedQty:1940},
+  {code:'EL-104', ar:'توريد وتمديد مواسير PVC قطر ٢٥ مم',            en:'Supply & install PVC conduit Ø25mm',  unit:'م.ط', qty:9500, price:14.25,   invoicedQty:5600}
+ ]
+};
+const boqItem = (cid,code) => (BOQ[cid]||[]).find(b=>b.code===code);
+
+/* flag metadata */
+const FLAGS = {
+  duplicate_exact:      {ar:'فاتورة مكررة (تطابق تام)',        cat:'تكرار',        sev:'blocking'},
+  duplicate_file_hash:  {ar:'نفس الملف مرفوع مسبقاً',           cat:'تكرار',        sev:'blocking'},
+  duplicate_strong:     {ar:'اشتباه تكرار (مبلغ وتاريخ متقارب)', cat:'تكرار',       sev:'blocking'},
+  duplicate_fuzzy:      {ar:'تشابه عالٍ مع فاتورة سابقة',       cat:'تكرار',        sev:'warning'},
+  vat_format_invalid:   {ar:'الرقم الضريبي بصيغة غير صحيحة',    cat:'ضريبية',       sev:'blocking'},
+  vat_unverified:       {ar:'لم يتم التحقق من المكلف لدى الهيئة', cat:'ضريبية',     sev:'blocking'},
+  qr_missing:           {ar:'رمز QR غير موجود على الفاتورة',     cat:'ضريبية',       sev:'warning'},
+  qr_mismatch:          {ar:'بيانات رمز QR لا تطابق الفاتورة',   cat:'ضريبية',       sev:'blocking'},
+  vat_rate_invalid:     {ar:'نسبة ضريبة القيمة المضافة ليست ١٥٪', cat:'ضريبية',     sev:'blocking'},
+  totals_mismatch:      {ar:'المجاميع لا تتطابق',               cat:'حسابية',       sev:'blocking'},
+  line_arithmetic_error:{ar:'خطأ حسابي في بند',                 cat:'حسابية',       sev:'blocking'},
+  unit_price_deviation: {ar:'انحراف سعر الوحدة عن العقد',       cat:'انحراف سعر',   sev:'blocking'},
+  qty_overrun:          {ar:'تجاوز الكمية التعاقدية',            cat:'تجاوز كمية',   sev:'blocking'},
+  price_drift:          {ar:'تغيّر السعر عن آخر فاتورة معتمدة',  cat:'انحراف سعر',   sev:'warning'},
+  unit_mismatch:        {ar:'وحدة القياس لا تطابق العقد',        cat:'بنود',         sev:'blocking'},
+  boq_unmatched:        {ar:'بند غير مطابق لجدول الكميات',       cat:'بنود',         sev:'blocking'},
+  contract_not_found:   {ar:'لا يوجد عقد مطابق',                cat:'بنود',         sev:'blocking'},
+  contract_expired:     {ar:'تاريخ الفاتورة خارج مدة العقد',     cat:'بنود',         sev:'warning'}
+};
+
+const STATUS = {
+  uploaded:  {ar:'مرفوعة',            cls:'bg-slate-100 text-slate-700'},
+  ocr_review:{ar:'بانتظار مراجعة الاستخراج', cls:'bg-amber-100 text-amber-800'},
+  flagged:   {ar:'مُعلَّمة',           cls:'bg-red-100 text-red-700'},
+  clean:     {ar:'مطابقة',            cls:'bg-emerald-100 text-emerald-700'},
+  approved:  {ar:'معتمدة للدفع',      cls:'bg-brand-100 text-brand-800'},
+  paid:      {ar:'مدفوعة',            cls:'bg-blue-100 text-blue-700'},
+  rejected:  {ar:'مرفوضة',            cls:'bg-slate-200 text-slate-600'},
+  archived:  {ar:'مؤرشفة',            cls:'bg-slate-100 text-slate-500'}
+};
+
+const L = (code,cid,qty,price,total,extra={}) => {
+  const b = boqItem(cid,code)||{};
+  return Object.assign({code, desc:b.ar||extra.desc, unit:extra.unit||b.unit, qty, price, total: total!==undefined?total:qty*price, match:extra.match||'exact_code', conf:extra.conf??1}, extra);
+};
+
+const INVOICES = [
+ {id:'INV-1041', sub:'S-01', contract:'C-2025-014', proj:'P-001', date:'2026-01-12', status:'approved', vat:'310234567800003', qr:true, conf:0.96,
+  lines:[L('CN-001','C-2025-014',1200,285),L('CN-003','C-2025-014',4500,62.5),L('CN-005','C-2025-014',3000,22.75)],
+  subtotal:691500, vatAmt:103725, total:795225, flags:[], hash:'a91f…6c2d'},
+
+ {id:'INV-1042', sub:'S-01', contract:'C-2025-014', proj:'P-001', date:'2026-02-09', status:'paid', vat:'310234567800003', qr:true, conf:0.94,
+  lines:[L('CN-002','C-2025-014',120,3150),L('CN-004','C-2025-014',1800,48)],
+  subtotal:464400, vatAmt:69660, total:534060, flags:[], hash:'7d3b…91af'},
+
+ {id:'INV-1042', dupOf:'INV-1042', key:'INV-1042-R', sub:'S-01', contract:'C-2025-014', proj:'P-001', date:'2026-02-27', status:'flagged', vat:'310234567800003', qr:true, conf:0.93,
+  lines:[L('CN-002','C-2025-014',120,3150),L('CN-004','C-2025-014',1800,48)],
+  subtotal:464400, vatAmt:69660, total:534060, hash:'7d3b…91af',
+  flags:[
+    {t:'duplicate_exact', d:'نفس الرقم الضريبي للمورد ونفس رقم الفاتورة INV-1042 المسجلة بتاريخ ٠٩ فبراير ٢٠٢٦ (مدفوعة).', ref:'INV-1042', score:1.00},
+    {t:'duplicate_file_hash', d:'بصمة الملف (SHA-256) مطابقة تماماً لملف الفاتورة INV-1042.', ref:'INV-1042', score:1.00}
+  ]},
+
+ {id:'INV-1055', sub:'S-01', contract:'C-2025-014', proj:'P-001', date:'2026-03-11', status:'flagged', vat:'310234567800003', qr:true, conf:0.91,
+  lines:[L('CN-002','C-2025-014',95,3420,324900,{issue:'unit_price_deviation'}),L('CN-001','C-2025-014',800,285)],
+  subtotal:552900, vatAmt:82935, total:635835, hash:'e5c8…22b1',
+  flags:[
+    {t:'unit_price_deviation', line:'CN-002', d:'السعر التعاقدي ٣٬١٥٠٫٠٠ ر.س / طن — السعر المفوتر ٣٬٤٢٠٫٠٠ ر.س / طن.', contracted:3150, invoiced:3420},
+    {t:'price_drift', line:'CN-002', d:'آخر سعر معتمد لهذا البند من نفس المورد كان ٣٬١٥٠٫٠٠ ر.س بتاريخ ٠٩ فبراير ٢٠٢٦.', contracted:3150, invoiced:3420}
+  ]},
+
+ {id:'INV-1061', sub:'S-01', contract:'C-2025-014', proj:'P-001', date:'2026-04-08', status:'flagged', vat:'310234567800003', qr:true, conf:0.95,
+  lines:[L('CN-001','C-2025-014',600,285,171000,{issue:'qty_overrun'}),L('CN-003','C-2025-014',2000,62.5)],
+  subtotal:296000, vatAmt:44400, total:340400, hash:'b12e…7f40',
+  flags:[
+    {t:'qty_overrun', line:'CN-001', d:'الكمية التعاقدية ٨٬٥٠٠ م٣ — المفوتر سابقاً ٨٬١٢٠ م٣ — هذه الفاتورة ٦٠٠ م٣ — الإجمالي ٨٬٧٢٠ م٣ (تجاوز ٢٢٠ م٣ بنسبة ٢٫٥٩٪).', contracted:8500, prior:8120, current:600}
+  ]},
+
+ {id:'INV-1068', sub:'S-01', contract:'C-2025-014', proj:'P-001', date:'2026-05-10', status:'flagged', vat:'310234567800003', qr:true, conf:0.88,
+  lines:[L('CN-004','C-2025-014',850,48,41000,{issue:'line_arithmetic_error'}),L('CN-005','C-2025-014',1500,22.75)],
+  subtotal:75125, vatAmt:11268.75, total:86400, hash:'3aa9…d5e7',
+  flags:[
+    {t:'line_arithmetic_error', line:'CN-004', d:'٨٥٠ × ٤٨٫٠٠ = ٤٠٬٨٠٠٫٠٠ ر.س بينما إجمالي البند المدوّن ٤١٬٠٠٠٫٠٠ ر.س (فرق ٢٠٠٫٠٠ ر.س).'},
+    {t:'totals_mismatch', d:'المجموع قبل الضريبة ٧٥٬١٢٥٫٠٠ + الضريبة ١١٬٢٦٨٫٧٥ = ٨٦٬٣٩٣٫٧٥ ر.س بينما الإجمالي المدوّن ٨٦٬٤٠٠٫٠٠ ر.س (فرق ٦٫٢٥ ر.س).'}
+  ]},
+
+ {id:'INV-2210', sub:'S-02', contract:'C-2025-027', proj:'P-002', date:'2026-02-20', status:'archived', vat:'300112233400003', qr:true, conf:0.97,
+  lines:[L('EL-101','C-2025-027',950,118),L('EL-104','C-2025-027',2200,14.25)],
+  subtotal:143450, vatAmt:21517.5, total:164967.5, flags:[], hash:'c4f1…08bd'},
+
+ {id:'INV-2231', sub:'S-02', contract:'C-2025-027', proj:'P-002', date:'2026-03-25', status:'flagged', vat:'300112233400003', qr:false, conf:0.86,
+  lines:[L('EL-103','C-2025-027',620,95),L('EL-102','C-2025-027',2,18500)],
+  subtotal:95900, vatAmt:14385, total:110285, hash:'9b70…4a13',
+  flags:[
+    {t:'qr_missing', d:'لم يُعثر على رمز الاستجابة السريعة (QR) المطلوب في الفاتورة الضريبية وفق متطلبات الفوترة الإلكترونية.'},
+    {t:'vat_unverified', d:'لم يتم بعد التحقق من الرقم الضريبي ٣٠٠١١٢٢٣٣٤٠٠٠٠٣ عبر بوابة "الاستعلام عن مكلف" لدى هيئة الزكاة والضريبة والجمارك.'}
+  ]},
+
+ {id:'INV-2245', sub:'S-02', contract:'C-2025-027', proj:'P-002', date:'2026-04-22', status:'flagged', vat:'300112233400003', qr:true, conf:0.93,
+  lines:[L('EL-103','C-2025-027',540,104,56160,{issue:'unit_price_deviation'}),L('EL-104','C-2025-027',1800,14.25)],
+  subtotal:81810, vatAmt:12271.5, total:94081.5, hash:'6e2a…bb95',
+  flags:[
+    {t:'unit_price_deviation', line:'EL-103', d:'السعر التعاقدي ٩٥٫٠٠ ر.س / نقطة — السعر المفوتر ١٠٤٫٠٠ ر.س / نقطة.', contracted:95, invoiced:104},
+    {t:'price_drift', line:'EL-103', d:'ارتفاع ٩٫٤٧٪ عن آخر سعر معتمد (٩٥٫٠٠ ر.س بتاريخ ٢٥ مارس ٢٠٢٦).', contracted:95, invoiced:104}
+  ]},
+
+ {id:'INV-2260', sub:'S-02', contract:'C-2025-027', proj:'P-002', date:'2026-05-19', status:'ocr_review', vat:'300112233400003', qr:true, conf:0.54,
+  lines:[L('EL-101','C-2025-027',480,118,56640,{conf:0.61}),L('EL-104','C-2025-027',1360,14.25,19380,{conf:0.42})],
+  subtotal:76020, vatAmt:11403, total:87423, flags:[], hash:'f087…3c6e', lowConf:true},
+
+ {id:'INV-3301', sub:'S-03', contract:null, proj:null, date:'2026-06-02', status:'flagged', vat:'31099887760003', qr:false, conf:0.79,
+  lines:[{code:'—', desc:'أعمال تشطيبات متنوعة حسب المرفق', unit:'مقطوعية', qty:1, price:68500, total:68500, match:'unmatched', conf:0.8, issue:'boq_unmatched'}],
+  subtotal:68500, vatAmt:10275, total:78775, hash:'1c55…ae02',
+  flags:[
+    {t:'vat_format_invalid', d:'الرقم الضريبي المستخرج ٣١٠٩٩٨٨٧٧٦٠٠٠٣ يتكون من ١٤ خانة — المطلوب ١٥ خانة تبدأ وتنتهي بالرقم ٣.'},
+    {t:'contract_not_found', d:'لا يوجد عقد ساري مسجّل للمقاول "مؤسسة الإنشاءات الوطنية" يغطي هذه الفاتورة.'},
+    {t:'boq_unmatched', line:'—', d:'البند "أعمال تشطيبات متنوعة حسب المرفق" لا يمكن مطابقته بأي بند في جدول الكميات.'}
+  ]}
+];
+const invKey = i => i.key || i.id;
+const findInv = k => INVOICES.find(i=>invKey(i)===k);
+const subOf   = id => SUBS.find(s=>s.id===id)||{name:'—'};
+const projOf  = id => PROJECTS.find(p=>p.id===id)||{name:'—'};
+const conOf   = id => CONTRACTS.find(c=>c.id===id)||{id:'—',title:'—'};
+
+const PRICE_HISTORY = {
+ 'CN-002':[{d:'2025-03-01',p:3150,src:'العقد'},{d:'2026-02-09',p:3150,src:'INV-1042'},{d:'2026-03-11',p:3420,src:'INV-1055'}],
+ 'EL-103':[{d:'2025-06-15',p:95,src:'العقد'},{d:'2026-03-25',p:95,src:'INV-2231'},{d:'2026-04-22',p:104,src:'INV-2245'}],
+ 'CN-001':[{d:'2025-03-01',p:285,src:'العقد'},{d:'2026-01-12',p:285,src:'INV-1041'},{d:'2026-04-08',p:285,src:'INV-1061'}]
+};
+
+const AUDIT = [
+  {t:'2026-06-02 09:41', u:'سارة الدوسري',  a:'رفع فاتورة',            o:'INV-3301', d:'رفع ملف invoice_3301.pdf — بدء الاستخراج الآلي'},
+  {t:'2026-05-31 14:12', u:'خالد العصيمي',  a:'تعديل حد التحقق',       o:'settings', d:'نافذة كشف التكرار: ٢١ يوماً ← ٣٠ يوماً'},
+  {t:'2026-05-19 11:03', u:'محمد الشمري',   a:'تصحيح حقل مستخرج',      o:'INV-2260', d:'كمية البند EL-104: ١٣٦٠ (ثقة ٤٢٪) — بانتظار التأكيد'},
+  {t:'2026-05-10 16:55', u:'النظام',        a:'إنشاء ملاحظة',          o:'INV-1068', d:'خطأ حسابي في البند CN-004 + عدم تطابق المجاميع'},
+  {t:'2026-04-22 10:20', u:'النظام',        a:'إنشاء ملاحظة',          o:'INV-2245', d:'انحراف سعر الوحدة للبند EL-103 (+٩٫٤٧٪)'},
+  {t:'2026-04-08 08:35', u:'النظام',        a:'إنشاء ملاحظة',          o:'INV-1061', d:'تجاوز الكمية التعاقدية للبند CN-001'},
+  {t:'2026-02-27 13:47', u:'النظام',        a:'إنشاء ملاحظة',          o:'INV-1042', d:'تطابق تام مع فاتورة مسجلة + بصمة ملف متطابقة'},
+  {t:'2026-02-20 09:15', u:'سارة الدوسري',  a:'اعتماد للدفع',          o:'INV-2210', d:'لا توجد ملاحظات حاجبة — اعتُمدت للصرف'},
+  {t:'2025-06-02 11:30', u:'خالد العصيمي',  a:'استيراد جدول كميات',    o:'C-2025-027', d:'استيراد ٤ بنود من ملف BoQ_Electrical.xlsx'}
+];
+
+const SETTINGS = [
+  {k:'نسبة ضريبة القيمة المضافة', v:'١٥٪', key:'vat_rate'},
+  {k:'حد التقريب في مطابقة المجاميع', v:'١٫٠٠ ر.س', key:'rounding_tolerance_sar'},
+  {k:'نافذة كشف التكرار (تطابق قوي)', v:'٣٠ يوماً', key:'duplicate_date_window_days'},
+  {k:'حد التشابه الضبابي', v:'٠٫٨٥', key:'duplicate_fuzzy_threshold'},
+  {k:'أقصى مسافة لبصمة الصورة', v:'٨', key:'phash_max_distance'},
+  {k:'سماحية انحراف سعر الوحدة', v:'٠٪ — أي انحراف يُعلَّم', key:'price_deviation_tolerance_pct'},
+  {k:'حد المطابقة الضبابية لبنود BoQ', v:'٠٫٨٠', key:'boq_fuzzy_match_threshold'},
+  {k:'حد الثقة المنخفضة في الاستخراج', v:'٠٫٧٥', key:'ocr_low_confidence'},
+  {k:'حد الثقة الحرجة (حاجب)', v:'٠٫٥٠', key:'ocr_critical_confidence'},
+  {k:'مدة حفظ السجلات', v:'٦ سنوات', key:'record_retention_years'}
+];
+
+/* ── session ────────────────────────────────────────────────────────────── */
+let ME = USERS[1];
+const can = w => w==='view' ? true : ME.role!=='viewer' && (w!=='admin' || ME.role==='admin');
+
+const NAV = [
+  {k:'dashboard', ar:'لوحة المعلومات', en:'Dashboard', icon:'M3 12h6v9H3zM10 3h6v18h-6zM17 8h4v13h-4z'},
+  {k:'invoices',  ar:'الفواتير',       en:'Invoices',  icon:'M6 2h9l5 5v15H6zM15 2v5h5'},
+  {k:'contracts', ar:'العقود وجداول الكميات', en:'Contracts & BoQ', icon:'M7 3h10v18l-5-3-5 3zM9 8h6M9 12h6'},
+  {k:'subs',      ar:'مقاولو الباطن',  en:'Subcontractors', icon:'M12 12a4 4 0 100-8 4 4 0 000 8zM4 21a8 8 0 0116 0'},
+  {k:'projects',  ar:'المشاريع',       en:'Projects',  icon:'M3 21h18M5 21V8l7-5 7 5v13M10 21v-6h4v6'},
+  {k:'archive',   ar:'الأرشيف والبحث', en:'Archive & Search', icon:'M3 7h18v13H3zM3 3h18v4H3zM10 12h4'},
+  {k:'users',     ar:'المستخدمون والصلاحيات', en:'Users & Roles', icon:'M12 12a4 4 0 100-8 4 4 0 000 8zM4 21a8 8 0 0116 0', admin:true},
+  {k:'audit',     ar:'سجل التدقيق',    en:'Audit Log', icon:'M12 8v5l3 2M12 3a9 9 0 100 18 9 9 0 000-18z'},
+  {k:'settings',  ar:'الإعدادات',      en:'Settings',  icon:'M12 15a3 3 0 100-6 3 3 0 000 6zM19.4 15a1.6 1.6 0 00.3 1.8l.1.1a2 2 0 11-2.8 2.8l-.1-.1a1.6 1.6 0 00-2.7 1.1V21a2 2 0 11-4 0v-.1A1.6 1.6 0 004.6 19l-.1.1A2 2 0 111.7 16.3l.1-.1A1.6 1.6 0 003 13.5H3a2 2 0 110-4h.1A1.6 1.6 0 004.9 7L4.8 7A2 2 0 117.6 4.2l.1.1a1.6 1.6 0 001.8.3H9.6a1.6 1.6 0 001-1.5V3a2 2 0 114 0v.1a1.6 1.6 0 001 1.5 1.6 1.6 0 001.8-.3l.1-.1a2 2 0 112.8 2.8l-.1.1a1.6 1.6 0 00-.3 1.8v.1a1.6 1.6 0 001.5 1H21a2 2 0 110 4h-.1a1.6 1.6 0 00-1.5 1z', admin:true}
+];
+
+/* ── boot ───────────────────────────────────────────────────────────────── */
+document.getElementById('login-modules').innerHTML =
+ ['استلام الفواتير و OCR','التحقق الضريبي — ZATCA','كشف الفواتير المكررة','سجل العقود وجداول الكميات','مطابقة بنود BoQ والأسعار','الأرشفة والبحث بالعربية']
+ .map(m=>`<div class="bg-white/10 rounded-lg px-3 py-2">${m}</div>`).join('');
+
+document.getElementById('role-picker').innerHTML = ['admin','reviewer','viewer'].map((r,i)=>
+ `<button data-r="${r}" onclick="pickRole('${r}')" class="role-btn text-xs font-bold rounded-lg py-2.5 border ${i===1?'border-brand-700 bg-brand-50 text-brand-800':'border-slate-300 text-slate-600'}">${ROLE_AR[r]}</button>`).join('');
+
+function pickRole(r){
+  ME = USERS.find(u=>u.role===r);
+  document.querySelectorAll('.role-btn').forEach(b=>{
+    const on = b.dataset.r===r;
+    b.className = `role-btn text-xs font-bold rounded-lg py-2.5 border ${on?'border-brand-700 bg-brand-50 text-brand-800':'border-slate-300 text-slate-600'}`;
+  });
+}
+function login(){
+  document.getElementById('scr-login').classList.add('hidden');
+  document.getElementById('scr-app').classList.remove('hidden');
+  renderNav(); renderUserChip(); go('dashboard');
+}
+function logout(){
+  document.getElementById('scr-app').classList.add('hidden');
+  document.getElementById('scr-login').classList.remove('hidden');
+}
+function renderUserChip(){
+  document.getElementById('user-chip').innerHTML = `
+    <div class="w-9 h-9 rounded-full bg-gold-500 text-brand-900 flex items-center justify-center font-extrabold text-sm">${ME.name.charAt(0)}</div>
+    <div class="leading-tight min-w-0">
+      <div class="text-sm font-bold truncate">${ME.name}</div>
+      <div class="text-[11px] text-brand-300">${ROLE_AR[ME.role]}</div>
+    </div>`;
+}
+function renderNav(){
+  document.getElementById('nav').innerHTML = NAV.filter(n=>!n.admin||ME.role==='admin').map(n=>`
+    <button onclick="go('${n.k}')" data-nav="${n.k}"
+      class="nav-item w-full flex items-center gap-2.5 px-3 py-2.5 rounded-xl text-brand-100 hover:bg-white/10 transition">
+      <svg class="w-4.5 h-4.5 shrink-0" style="width:18px;height:18px" fill="none" stroke="currentColor" stroke-width="1.8" viewBox="0 0 24 24"><path d="${n.icon}"/></svg>
+      <span class="truncate">${LANG==='ar'?n.ar:n.en}</span>
+    </button>`).join('');
+}
+function toggleLang(){
+  LANG = LANG==='ar'?'en':'ar';
+  document.documentElement.dir = LANG==='ar'?'rtl':'ltr';
+  document.documentElement.lang = LANG;
+  document.getElementById('lang-btn').textContent = LANG==='ar'?'EN':'ع';
+  renderNav(); go(CURRENT);
+}
+function toggleCal(){
+  CAL = CAL==='g'?'h':CAL==='h'?'b':'g';
+  document.getElementById('cal-btn').textContent = CAL==='g'?'ميلادي':CAL==='h'?'هجري':'ميلادي + هجري';
+  go(CURRENT);
+}
+
+/* ── router ─────────────────────────────────────────────────────────────── */
+let CURRENT = 'dashboard';
+const PAGES = {};
+function go(k){
+  CURRENT = k;
+  const n = NAV.find(x=>x.k===k)||{ar:'',en:''};
+  document.getElementById('page-title').textContent = LANG==='ar'?n.ar:n.en;
+  document.getElementById('page-sub').textContent = '';
+  document.querySelectorAll('[data-nav]').forEach(b=>b.classList.toggle('active', b.dataset.nav===k));
+  document.getElementById('view').innerHTML = `<div class="fade">${(PAGES[k]||(()=>''))()}</div>`;
+  document.querySelectorAll('[data-role]').forEach(el=>{
+    el.style.display = el.dataset.role.split(',').includes(ME.role) ? '' : 'none';
+  });
+  window.scrollTo(0,0);
+}
+
+/* ── shared UI bits ─────────────────────────────────────────────────────── */
+const badge = s => `<span class="text-xs font-bold px-2.5 py-1 rounded-full ${STATUS[s].cls}">${STATUS[s].ar}</span>`;
+const sevPill = sev => sev==='blocking'
+  ? '<span class="text-[11px] font-bold px-2 py-0.5 rounded bg-red-600 text-white">حاجب</span>'
+  : sev==='warning' ? '<span class="text-[11px] font-bold px-2 py-0.5 rounded bg-amber-500 text-white">تنبيه</span>'
+  : '<span class="text-[11px] font-bold px-2 py-0.5 rounded bg-slate-400 text-white">معلومة</span>';
+const flagChip = t => {
+  const f = FLAGS[t];
+  const c = f.sev==='blocking'?'bg-red-50 text-red-700 border-red-200':'bg-amber-50 text-amber-800 border-amber-200';
+  return `<span class="text-[11px] font-semibold border rounded-lg px-2 py-0.5 ${c}">${f.ar}</span>`;
+};
+const card = (t,v,sub,accent='brand') => `
+  <div class="bg-white rounded-2xl border border-slate-200 p-5">
+    <div class="text-sm text-slate-500 font-semibold mb-1">${t}</div>
+    <div class="text-3xl font-extrabold text-${accent}-800">${v}</div>
+    <div class="text-xs text-slate-400 mt-1">${sub||''}</div>
+  </div>`;
+const section = (title, body, action='') => `
+  <div class="bg-white rounded-2xl border border-slate-200 overflow-hidden">
+    <div class="px-5 py-3.5 border-b border-slate-200 flex items-center justify-between">
+      <h3 class="font-extrabold text-brand-800">${title}</h3>${action}
+    </div>${body}
+  </div>`;
+
+/* ── PAGE: dashboard ────────────────────────────────────────────────────── */
+PAGES.dashboard = () => {
+  const pending  = INVOICES.filter(i=>i.status==='ocr_review').length;
+  const flagged  = INVOICES.filter(i=>i.status==='flagged').length;
+  const approved = INVOICES.filter(i=>i.status==='approved').length;
+  const paidSum  = INVOICES.filter(i=>['paid','archived'].includes(i.status)).reduce((s,i)=>s+i.total,0);
+
+  const catCount = {};
+  INVOICES.forEach(i=>(i.flags||[]).forEach(f=>{const c=FLAGS[f.t].cat; catCount[c]=(catCount[c]||0)+1}));
+  const maxCat = Math.max(...Object.values(catCount),1);
+
+  const byProject = PROJECTS.map(p=>{
+    const inv = INVOICES.filter(i=>i.proj===p.id);
+    return {n:p.name, c:inv.length, v:inv.reduce((s,i)=>s+i.total,0)};
+  });
+  const bySub = SUBS.map(s=>{
+    const inv = INVOICES.filter(i=>i.sub===s.id);
+    return {n:s.name, c:inv.length, v:inv.reduce((s2,i)=>s2+i.total,0), f:inv.filter(i=>i.status==='flagged').length};
+  });
+  const maxV = Math.max(...byProject.map(x=>x.v),1);
+
+  return `
+  <div class="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-4 gap-4 mb-6">
+    ${card('بانتظار مراجعة الاستخراج', fmtNum(pending), 'فواتير ثقة استخراجها منخفضة','amber')}
+    ${card('فواتير مُعلَّمة', fmtNum(flagged), 'محجوبة عن الصرف حتى المعالجة','red')}
+    ${card('معتمدة للدفع', fmtNum(approved), 'لا توجد ملاحظات حاجبة','brand')}
+    ${card('إجمالي المصروف', fmtMoney(paidSum), 'فواتير مدفوعة ومؤرشفة','brand')}
+  </div>
+
+  <div class="grid grid-cols-1 lg:grid-cols-3 gap-4 mb-6">
+    <div class="lg:col-span-2">
+      ${section('الملاحظات حسب النوع', `<div class="p-5 space-y-3">
+        ${Object.entries(catCount).sort((a,b)=>b[1]-a[1]).map(([c,n])=>`
+          <div class="flex items-center gap-3">
+            <div class="w-28 text-sm font-semibold text-slate-600 shrink-0">${c}</div>
+            <div class="flex-1 bg-slate-100 rounded-full h-3 overflow-hidden">
+              <div class="h-full bg-brand-700 rounded-full" style="width:${n/maxCat*100}%"></div>
+            </div>
+            <div class="w-8 text-sm font-extrabold text-brand-800 text-left">${fmtNum(n)}</div>
+          </div>`).join('')}
+      </div>`)}
+    </div>
+    ${section('حالة الفواتير', `<div class="p-5 space-y-2.5">
+      ${Object.keys(STATUS).filter(s=>INVOICES.some(i=>i.status===s)).map(s=>`
+        <div class="flex items-center justify-between">
+          ${badge(s)}
+          <span class="font-extrabold text-slate-700">${fmtNum(INVOICES.filter(i=>i.status===s).length)}</span>
+        </div>`).join('')}
+    </div>`)}
+  </div>
+
+  <div class="grid grid-cols-1 lg:grid-cols-2 gap-4 mb-6">
+    ${section('الإجماليات حسب المشروع', `<div class="p-5 space-y-4">
+      ${byProject.map(p=>`
+        <div>
+          <div class="flex justify-between text-sm mb-1.5">
+            <span class="font-bold text-slate-700">${p.n}</span>
+            <span class="font-extrabold text-brand-800">${fmtMoney(p.v)}</span>
+          </div>
+          <div class="bg-slate-100 rounded-full h-2.5"><div class="h-full bg-gold-500 rounded-full" style="width:${p.v/maxV*100}%"></div></div>
+          <div class="text-xs text-slate-400 mt-1">${fmtNum(p.c)} فاتورة</div>
+        </div>`).join('')}
+    </div>`)}
+    ${section('الإجماليات حسب مقاول الباطن', `<table class="tbl w-full text-sm">
+      <thead><tr><th>المقاول</th><th>عدد</th><th>مُعلَّمة</th><th>الإجمالي</th></tr></thead>
+      <tbody>${bySub.map(s=>`<tr>
+        <td class="font-semibold">${s.n}</td>
+        <td>${fmtNum(s.c)}</td>
+        <td>${s.f? `<span class="text-red-600 font-bold">${fmtNum(s.f)}</span>`:'—'}</td>
+        <td class="font-bold">${fmtMoney(s.v)}</td></tr>`).join('')}</tbody></table>`)}
+  </div>
+
+  ${section('يتطلب إجراءً', `<table class="tbl w-full text-sm">
+    <thead><tr><th>الفاتورة</th><th>المقاول</th><th>التاريخ</th><th>المبلغ</th><th>الملاحظات</th><th></th></tr></thead>
+    <tbody>${INVOICES.filter(i=>['flagged','ocr_review'].includes(i.status)).map(i=>`
+      <tr>
+        <td class="font-bold text-brand-800">${i.id}</td>
+        <td>${subOf(i.sub).name}</td>
+        <td class="text-slate-500">${dt(i.date)}</td>
+        <td class="font-semibold">${fmtMoney(i.total)}</td>
+        <td class="space-x-1 space-x-reverse">${i.status==='ocr_review'
+          ? '<span class="text-[11px] font-semibold border rounded-lg px-2 py-0.5 bg-amber-50 text-amber-800 border-amber-200">ثقة استخراج منخفضة</span>'
+          : (i.flags||[]).map(f=>flagChip(f.t)).join(' ')}</td>
+        <td class="text-left"><button onclick="${i.status==='ocr_review'?`openOcr('${invKey(i)}')`:`openInvoice('${invKey(i)}')`}"
+            class="text-brand-700 font-bold hover:underline text-xs">${i.status==='ocr_review'?'مراجعة الاستخراج':'فتح'} ←</button></td>
+      </tr>`).join('')}</tbody></table>`)}
+  `;
+};
+
+/* ── PAGE: invoices ─────────────────────────────────────────────────────── */
+let INV_FILTER = 'all';
+PAGES.invoices = () => {
+  const list = INV_FILTER==='all' ? INVOICES : INVOICES.filter(i=>i.status===INV_FILTER);
+  const tabs = [['all','الكل'],['ocr_review','بانتظار المراجعة'],['flagged','مُعلَّمة'],['approved','معتمدة'],['paid','مدفوعة'],['archived','مؤرشفة']];
+  return `
+  <div class="flex flex-wrap gap-2 mb-4">
+    ${tabs.map(([k,l])=>`<button onclick="INV_FILTER='${k}';go('invoices')"
+      class="text-sm font-bold px-4 py-2 rounded-xl border ${INV_FILTER===k?'bg-brand-800 text-white border-brand-800':'bg-white border-slate-300 text-slate-600 hover:bg-slate-50'}">
+      ${l} <span class="opacity-60">${fmtNum(k==='all'?INVOICES.length:INVOICES.filter(i=>i.status===k).length)}</span></button>`).join('')}
+  </div>
+  ${section(`الفواتير (${fmtNum(list.length)})`, `<table class="tbl w-full text-sm">
+    <thead><tr><th>رقم الفاتورة</th><th>مقاول الباطن</th><th>العقد</th><th>التاريخ</th><th>الإجمالي</th><th>الحالة</th><th>الملاحظات</th><th></th></tr></thead>
+    <tbody>${list.map(i=>`
+      <tr class="cursor-pointer" onclick="openInvoice('${invKey(i)}')">
+        <td class="font-bold text-brand-800">${i.id}${i.dupOf?' <span class="text-[10px] bg-red-600 text-white rounded px-1.5 py-0.5">مكررة</span>':''}</td>
+        <td>${subOf(i.sub).name}</td>
+        <td class="text-slate-500">${i.contract||'—'}</td>
+        <td class="text-slate-500 whitespace-nowrap">${dt(i.date)}</td>
+        <td class="font-semibold whitespace-nowrap">${fmtMoney(i.total)}</td>
+        <td>${badge(i.status)}</td>
+        <td>${(i.flags||[]).length? `<span class="font-extrabold ${(i.flags||[]).some(f=>FLAGS[f.t].sev==='blocking')?'text-red-600':'text-amber-600'}">${fmtNum(i.flags.length)}</span>`:'<span class="text-emerald-600">✓</span>'}</td>
+        <td class="text-left text-brand-700 font-bold text-xs">فتح ←</td>
+      </tr>`).join('')}</tbody></table>`)}
+  `;
+};
+
+/* ── PAGE: contracts ────────────────────────────────────────────────────── */
+PAGES.contracts = () => `
+  ${section('العقود', `<table class="tbl w-full text-sm">
+    <thead><tr><th>رقم العقد</th><th>المشروع</th><th>مقاول الباطن</th><th>قيمة العقد</th><th>المدة</th><th>محتجز / دفعة مقدمة</th><th>بنود BoQ</th><th></th></tr></thead>
+    <tbody>${CONTRACTS.map(c=>`
+      <tr class="cursor-pointer" onclick="openContract('${c.id}')">
+        <td class="font-bold text-brand-800">${c.id}</td>
+        <td>${projOf(c.proj).name}</td>
+        <td>${subOf(c.sub).name}</td>
+        <td class="font-semibold whitespace-nowrap">${fmtMoney(c.value)}</td>
+        <td class="text-slate-500 text-xs whitespace-nowrap">${dt(c.start)} — ${dt(c.end)}</td>
+        <td class="text-slate-600">${fmtPct(c.retention)} / ${fmtPct(c.advance)}</td>
+        <td class="font-bold">${fmtNum((BOQ[c.id]||[]).length)}</td>
+        <td class="text-left text-brand-700 font-bold text-xs">فتح ←</td>
+      </tr>`).join('')}</tbody></table>`,
+    `<button onclick="openBoqImport()" data-role="admin" class="text-sm font-bold bg-brand-50 text-brand-800 border border-brand-200 rounded-xl px-3.5 py-1.5 hover:bg-brand-100">استيراد جدول كميات من Excel</button>`)}
+  <p class="text-xs text-slate-400 mt-3">ملاحظة النموذج الأولي: تعديل العقود وجداول الكميات متاح للمدير فقط (مطبَّق عبر سياسات RLS في الإصدار الإنتاجي).</p>
+`;
+
+/* ── PAGE: subcontractors / projects / users / audit / settings ─────────── */
+PAGES.subs = () => section('مقاولو الباطن', `<table class="tbl w-full text-sm">
+  <thead><tr><th>الاسم</th><th>السجل التجاري</th><th>الرقم الضريبي</th><th>العقود</th><th>الفواتير</th><th>الحالة</th></tr></thead>
+  <tbody>${SUBS.map(s=>{
+    const bad = !/^3\d{13}3$/.test(s.vat);
+    return `<tr>
+      <td><div class="font-bold">${s.name}</div><div class="text-xs text-slate-400">${s.nameEn}</div></td>
+      <td class="text-slate-600">${s.cr}</td>
+      <td class="${bad?'text-red-600 font-bold':'text-slate-600'}">${s.vat}${bad?' <span class="text-[10px] bg-red-100 text-red-700 rounded px-1.5 py-0.5">صيغة غير صحيحة</span>':''}</td>
+      <td>${fmtNum(CONTRACTS.filter(c=>c.sub===s.id).length)}</td>
+      <td>${fmtNum(INVOICES.filter(i=>i.sub===s.id).length)}</td>
+      <td><span class="text-xs font-bold px-2.5 py-1 rounded-full ${s.status==='نشط'?'bg-emerald-100 text-emerald-700':'bg-amber-100 text-amber-800'}">${s.status}</span></td>
+    </tr>`}).join('')}</tbody></table>`);
+
+PAGES.projects = () => `<div class="grid grid-cols-1 lg:grid-cols-2 gap-4">
+  ${PROJECTS.map(p=>{
+    const inv = INVOICES.filter(i=>i.proj===p.id);
+    const val = inv.reduce((s,i)=>s+i.total,0);
+    return `<div class="bg-white rounded-2xl border border-slate-200 p-5">
+      <div class="flex justify-between items-start mb-3">
+        <div><h3 class="font-extrabold text-brand-800 text-lg">${p.name}</h3>
+        <div class="text-xs text-slate-400">${p.nameEn} · ${p.city}</div></div>
+        <span class="text-xs font-bold bg-brand-50 text-brand-800 px-2.5 py-1 rounded-full">${p.id}</span>
+      </div>
+      <div class="text-sm text-slate-600 mb-4">العميل: ${p.client}</div>
+      <div class="grid grid-cols-2 gap-3 text-sm">
+        <div class="bg-slate-50 rounded-xl p-3"><div class="text-xs text-slate-500">ميزانية المشروع</div><div class="font-extrabold text-brand-800">${fmtMoney(p.budget)}</div></div>
+        <div class="bg-slate-50 rounded-xl p-3"><div class="text-xs text-slate-500">إجمالي الفواتير</div><div class="font-extrabold text-brand-800">${fmtMoney(val)}</div></div>
+        <div class="bg-slate-50 rounded-xl p-3"><div class="text-xs text-slate-500">العقود</div><div class="font-extrabold">${fmtNum(CONTRACTS.filter(c=>c.proj===p.id).length)}</div></div>
+        <div class="bg-slate-50 rounded-xl p-3"><div class="text-xs text-slate-500">الفواتير</div><div class="font-extrabold">${fmtNum(inv.length)}</div></div>
+      </div>
+      <div class="text-xs text-slate-400 mt-3">${dt(p.start)} — ${dt(p.end)}</div>
+    </div>`}).join('')}</div>`;
+
+PAGES.users = () => section('المستخدمون والصلاحيات', `<table class="tbl w-full text-sm">
+  <thead><tr><th>المستخدم</th><th>البريد</th><th>الدور</th><th>الصلاحيات</th></tr></thead>
+  <tbody>${USERS.map(u=>`<tr>
+    <td><div class="font-bold">${u.name}</div><div class="text-xs text-slate-400">${u.title}</div></td>
+    <td class="text-slate-600" dir="ltr">${u.email}</td>
+    <td><span class="text-xs font-bold px-2.5 py-1 rounded-full ${u.role==='admin'?'bg-brand-100 text-brand-800':u.role==='reviewer'?'bg-blue-100 text-blue-700':'bg-slate-100 text-slate-600'}">${ROLE_AR[u.role]}</span></td>
+    <td class="text-xs text-slate-500">${u.role==='admin'?'كل الصلاحيات · إدارة العقود والإعدادات والمستخدمين'
+      :u.role==='reviewer'?'رفع الفواتير · تصحيح الاستخراج · معالجة الملاحظات · الاعتماد للدفع'
+      :'اطّلاع فقط — لا توجد أي صلاحية تعديل'}</td>
+  </tr>`).join('')}</tbody></table>`);
+
+PAGES.audit = () => section('سجل التدقيق — غير قابل للتعديل أو الحذف', `<table class="tbl w-full text-sm">
+  <thead><tr><th>الوقت</th><th>المستخدم</th><th>الإجراء</th><th>السجل</th><th>التفاصيل</th></tr></thead>
+  <tbody>${AUDIT.map(a=>`<tr>
+    <td class="text-slate-500 whitespace-nowrap" dir="ltr">${a.t}</td>
+    <td class="font-semibold">${a.u}</td>
+    <td><span class="text-xs font-bold bg-slate-100 px-2 py-1 rounded">${a.a}</span></td>
+    <td class="font-bold text-brand-800">${a.o}</td>
+    <td class="text-slate-600">${a.d}</td></tr>`).join('')}</tbody></table>`);
+
+PAGES.settings = () => `
+  <div class="grid grid-cols-1 lg:grid-cols-2 gap-4">
+    ${section('حدود التحقق', `<table class="tbl w-full text-sm">
+      <thead><tr><th>الإعداد</th><th>القيمة</th><th></th></tr></thead>
+      <tbody>${SETTINGS.map(s=>`<tr>
+        <td class="font-semibold">${s.k}<div class="text-[11px] text-slate-400" dir="ltr">${s.key}</div></td>
+        <td class="font-bold text-brand-800">${s.v}</td>
+        <td class="text-left"><button class="text-xs text-brand-700 font-bold hover:underline">تعديل</button></td>
+      </tr>`).join('')}</tbody></table>`)}
+    <div class="space-y-4">
+      ${section('مزوّد الاستخراج (OCR)', `<div class="p-5 space-y-3 text-sm">
+        ${[['طبقة نص PDF الرقمي','pdf-text','مفعّل — الأساس',true],
+           ['Tesseract (عربي + إنجليزي)','tesseract','مفعّل — احتياطي للمسح الضوئي',true],
+           ['استخراج بنموذج رؤية (LLM Vision)','llm-vision','معطّل — يتطلب نقطة اتصال ومفتاح',false],
+           ['Google Document AI','document-ai','معطّل — واجهة محوّل جاهزة',false]].map(([n,k,d,on])=>`
+          <div class="flex items-center justify-between border border-slate-200 rounded-xl px-4 py-3">
+            <div><div class="font-bold">${n}</div><div class="text-xs text-slate-400" dir="ltr">${k}</div><div class="text-xs text-slate-500 mt-0.5">${d}</div></div>
+            <div class="w-11 h-6 rounded-full ${on?'bg-brand-700':'bg-slate-300'} relative shrink-0"><div class="w-5 h-5 bg-white rounded-full absolute top-0.5 ${on?'left-0.5':'right-0.5'}"></div></div>
+          </div>`).join('')}
+      </div>`)}
+      ${section('استراتيجية التحقق من الهيئة (ZATCA)', `<div class="p-5 space-y-3 text-sm">
+        ${[['قراءة رمز QR ومطابقته (TLV)','qr','مفعّل — تحقق محلي بالكامل',true],
+           ['تحقق يدوي عبر بوابة الاستعلام عن مكلف','manual','مفعّل — الاعتماد النهائي',true],
+           ['واجهة برمجية رسمية للهيئة','api','معطّل — بانتظار بيانات اعتماد رسمية',false]].map(([n,k,d,on])=>`
+          <div class="flex items-center justify-between border border-slate-200 rounded-xl px-4 py-3">
+            <div><div class="font-bold">${n}</div><div class="text-xs text-slate-400" dir="ltr">${k}</div><div class="text-xs text-slate-500 mt-0.5">${d}</div></div>
+            <div class="w-11 h-6 rounded-full ${on?'bg-brand-700':'bg-slate-300'} relative shrink-0"><div class="w-5 h-5 bg-white rounded-full absolute top-0.5 ${on?'left-0.5':'right-0.5'}"></div></div>
+          </div>`).join('')}
+        <a href="https://zatca.gov.sa/ar/eServices/Pages/TaxpayerLookup.aspx" target="_blank" rel="noopener"
+           class="block text-center text-xs font-bold text-brand-700 border border-brand-200 bg-brand-50 rounded-xl py-2.5 hover:bg-brand-100">
+          فتح بوابة الاستعلام عن مكلف ↗</a>
+      </div>`)}
+    </div>
+  </div>`;
+
+/* ── PAGE: archive & search ─────────────────────────────────────────────── */
+let SEARCH = {q:'', status:'', sub:'', flag:''};
+PAGES.archive = () => `
+  <div class="bg-white rounded-2xl border border-slate-200 p-5 mb-4">
+    <div class="relative mb-4">
+      <input id="q" value="${SEARCH.q}" oninput="SEARCH.q=this.value;renderResults()"
+        placeholder="بحث نصي كامل بالعربية — اسم المورد، رقم الفاتورة، المشروع، وصف بند…"
+        class="w-full bg-slate-100 rounded-xl pr-11 pl-4 py-3 outline-none focus:ring-2 focus:ring-brand-300">
+      <svg class="w-5 h-5 absolute right-4 top-3.5 text-slate-400" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><circle cx="11" cy="11" r="7"/><path d="m20 20-3.5-3.5"/></svg>
+    </div>
+    <div class="grid grid-cols-1 sm:grid-cols-3 gap-3 text-sm">
+      <select onchange="SEARCH.status=this.value;renderResults()" class="border border-slate-300 rounded-xl px-3 py-2.5">
+        <option value="">كل الحالات</option>${Object.entries(STATUS).map(([k,v])=>`<option value="${k}">${v.ar}</option>`).join('')}
+      </select>
+      <select onchange="SEARCH.sub=this.value;renderResults()" class="border border-slate-300 rounded-xl px-3 py-2.5">
+        <option value="">كل مقاولي الباطن</option>${SUBS.map(s=>`<option value="${s.id}">${s.name}</option>`).join('')}
+      </select>
+      <select onchange="SEARCH.flag=this.value;renderResults()" class="border border-slate-300 rounded-xl px-3 py-2.5">
+        <option value="">كل أنواع الملاحظات</option>${[...new Set(Object.values(FLAGS).map(f=>f.cat))].map(c=>`<option value="${c}">${c}</option>`).join('')}
+      </select>
+    </div>
+    <p class="text-xs text-slate-400 mt-3">في الإصدار الإنتاجي: بحث <span dir="ltr">PostgreSQL full-text</span> مع <span dir="ltr">pg_trgm</span> للمطابقة الضبابية العربية · فلاتر إضافية للمدى الزمني (هجري/ميلادي) والعقد والمبلغ.</p>
+  </div>
+  <div id="results"></div>`;
+
+function runSearch(){ SEARCH.q = document.getElementById('q').value; renderResults(); }
+function renderResults(){
+  const el = document.getElementById('results'); if(!el) return;
+  const q = SEARCH.q.trim();
+  const hits = INVOICES.filter(i=>{
+    if(SEARCH.status && i.status!==SEARCH.status) return false;
+    if(SEARCH.sub && i.sub!==SEARCH.sub) return false;
+    if(SEARCH.flag && !(i.flags||[]).some(f=>FLAGS[f.t].cat===SEARCH.flag)) return false;
+    if(!q) return true;
+    const hay = [i.id, subOf(i.sub).name, projOf(i.proj).name, i.contract||'', i.vat, ...i.lines.map(l=>l.desc+' '+l.code)].join(' ');
+    return hay.includes(q);
+  });
+  el.innerHTML = section(`النتائج (${fmtNum(hits.length)}) — أرشيف غير قابل للحذف`, hits.length? `<table class="tbl w-full text-sm">
+    <thead><tr><th>الفاتورة</th><th>المقاول</th><th>المشروع</th><th>التاريخ</th><th>الإجمالي</th><th>الحالة</th><th>حفظ حتى</th></tr></thead>
+    <tbody>${hits.map(i=>{
+      const keep = new Date(i.date+'T00:00:00'); keep.setFullYear(keep.getFullYear()+6);
+      return `<tr class="cursor-pointer" onclick="openInvoice('${invKey(i)}')">
+        <td class="font-bold text-brand-800">${i.id}</td>
+        <td>${subOf(i.sub).name}</td>
+        <td class="text-slate-500">${i.proj?projOf(i.proj).name:'—'}</td>
+        <td class="text-slate-500 whitespace-nowrap">${dt(i.date)}</td>
+        <td class="font-semibold whitespace-nowrap">${fmtMoney(i.total)}</td>
+        <td>${badge(i.status)}</td>
+        <td class="text-xs text-slate-400 whitespace-nowrap">${gFmt.format(keep)}</td>
+      </tr>`}).join('')}</tbody></table>`
+    : `<div class="p-10 text-center text-slate-400 text-sm">لا توجد نتائج مطابقة</div>`);
+}
+
+/* ═══════════════════ MODALS ═══════════════════ */
+function showModal(html, cls='w-full max-w-4xl'){
+  const box = document.getElementById('modal-box');
+  box.className = `bg-white rounded-2xl shadow-2xl max-h-[94vh] overflow-hidden flex flex-col fade ${cls}`;
+  box.innerHTML = html;
+  document.getElementById('modal').classList.remove('hidden');
+}
+function closeModal(){ document.getElementById('modal').classList.add('hidden'); }
+const mHead = (t,s='') => `<div class="px-6 py-4 border-b border-slate-200 flex items-center justify-between shrink-0">
+  <div><h3 class="font-extrabold text-brand-800 text-lg">${t}</h3>${s?`<div class="text-xs text-slate-400 mt-0.5">${s}</div>`:''}</div>
+  <button onclick="closeModal()" class="w-9 h-9 rounded-xl hover:bg-slate-100 text-slate-400 text-xl leading-none">×</button></div>`;
+
+/* ── upload ─────────────────────────────────────────────────────────────── */
+function openUpload(){
+  showModal(mHead('رفع فاتورة جديدة','PDF · JPG · PNG — حتى ٢٠ ميجابايت للملف') + `
+  <div class="p-6 overflow-y-auto">
+    <div class="border-2 border-dashed border-brand-300 bg-brand-50/50 rounded-2xl p-10 text-center mb-5">
+      <svg class="w-12 h-12 mx-auto text-brand-400 mb-3" fill="none" stroke="currentColor" stroke-width="1.6" viewBox="0 0 24 24"><path d="M12 16V4m0 0L8 8m4-4 4 4M4 16v2a2 2 0 002 2h12a2 2 0 002-2v-2"/></svg>
+      <div class="font-extrabold text-brand-800 mb-1">اسحب الملفات هنا أو اضغط للاختيار</div>
+      <div class="text-sm text-slate-500">يمكن رفع عدة فواتير دفعة واحدة</div>
+      <div class="flex justify-center gap-2 mt-4">
+        <button class="bg-brand-800 text-white text-sm font-bold rounded-xl px-4 py-2">اختيار ملفات</button>
+        <button class="border border-brand-300 text-brand-800 text-sm font-bold rounded-xl px-4 py-2 flex items-center gap-1.5">
+          <svg class="w-4 h-4" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path d="M3 8h3l2-3h8l2 3h3v11H3z"/><circle cx="12" cy="13" r="3.5"/></svg>
+          التصوير بالكاميرا</button>
+      </div>
+    </div>
+    <div class="space-y-2 mb-5">
+      ${[['invoice_1041_alareen.pdf','٤٨٦ ك.ب','PDF رقمي — يحتوي طبقة نص','done'],
+         ['scan_boq_march.jpg','٢٫١ م.ب','صورة ممسوحة — سيُستخدم Tesseract','ocr'],
+         ['fatoora_2231.pdf','٧٩٠ ك.ب','بانتظار المعالجة','wait']].map(([n,s,d,st])=>`
+        <div class="flex items-center gap-3 border border-slate-200 rounded-xl px-4 py-3">
+          <div class="w-9 h-9 rounded-lg bg-brand-50 text-brand-700 flex items-center justify-center font-extrabold text-xs">PDF</div>
+          <div class="flex-1 min-w-0"><div class="font-bold text-sm truncate" dir="ltr">${n}</div><div class="text-xs text-slate-400">${s} · ${d}</div></div>
+          ${st==='done'?'<span class="text-xs font-bold text-emerald-600">اكتمل الاستخراج ✓</span>'
+            :st==='ocr'?'<span class="text-xs font-bold text-amber-600">جارٍ الاستخراج…</span>'
+            :'<span class="text-xs font-bold text-slate-400">في الانتظار</span>'}
+        </div>`).join('')}
+    </div>
+    <div class="bg-amber-50 border border-amber-200 rounded-xl p-4 text-sm text-amber-900">
+      <b>ما يحدث بعد الرفع:</b> يُحسب بصمة الملف (SHA-256) والبصمة البصرية للصورة لكشف إعادة الرفع، ثم يمر الملف على طبقة الاستخراج
+      (طبقة نص PDF ← Tesseract ← نموذج رؤية اختياري) وينتقل إلى شاشة مراجعة الاستخراج قبل الحفظ.
+    </div>
+  </div>
+  <div class="px-6 py-4 border-t border-slate-200 flex justify-end gap-2 shrink-0">
+    <button onclick="closeModal()" class="px-4 py-2.5 rounded-xl border border-slate-300 font-bold text-sm">إلغاء</button>
+    <button onclick="closeModal();openOcr('INV-2260')" class="px-5 py-2.5 rounded-xl bg-brand-800 text-white font-bold text-sm">متابعة إلى مراجعة الاستخراج ←</button>
+  </div>`, 'w-full max-w-2xl');
+}
+
+/* ── OCR review (human in the loop) ─────────────────────────────────────── */
+function confBar(c){
+  const col = c>=0.75?'bg-emerald-500':c>=0.5?'bg-amber-500':'bg-red-500';
+  return `<div class="flex items-center gap-1.5"><div class="w-14 h-1.5 bg-slate-200 rounded-full overflow-hidden"><div class="h-full ${col}" style="width:${c*100}%"></div></div><span class="text-[11px] font-bold ${c>=0.75?'text-emerald-600':c>=0.5?'text-amber-600':'text-red-600'}">${Math.round(c*100)}٪</span></div>`;
+}
+function field(label, val, conf, key){
+  const ring = conf>=0.75?'border-slate-300':conf>=0.5?'border-amber-400 bg-amber-50':'border-red-400 bg-red-50';
+  return `<div onmouseenter="hlDoc('${key}',1)" onmouseleave="hlDoc('${key}',0)">
+    <div class="flex items-center justify-between mb-1">
+      <label class="text-xs font-bold text-slate-600">${label}</label>${confBar(conf)}
+    </div>
+    <input value="${val}" class="w-full border ${ring} rounded-lg px-3 py-2 text-sm outline-none focus:ring-2 focus:ring-brand-300">
+    ${conf<0.5?'<div class="text-[11px] text-red-600 font-bold mt-1">ثقة حرجة — يجب التصحيح قبل المتابعة</div>':conf<0.75?'<div class="text-[11px] text-amber-700 font-semibold mt-1">ثقة منخفضة — يُرجى التأكيد</div>':''}
+  </div>`;
+}
+function hlDoc(key,on){ document.querySelectorAll(`[data-f="${key}"]`).forEach(e=>e.classList.toggle('hl',!!on)); }
+
+function openOcr(k){
+  const i = findInv(k), s = subOf(i.sub);
+  showModal(mHead('مراجعة الاستخراج — مطابقة بشرية', `${i.id} · ${s.name} · ثقة الاستخراج الإجمالية ${Math.round(i.conf*100)}٪ · المزوّد: pdf-text`) + `
+  <div class="flex-1 overflow-hidden grid grid-cols-1 lg:grid-cols-2">
+    <!-- document pane -->
+    <div class="bg-slate-200 p-6 overflow-y-auto border-l border-slate-300">
+      <div class="doc-page rounded-lg p-7 mx-auto max-w-lg text-[13px]">
+        <div class="flex justify-between items-start border-b-2 border-slate-800 pb-3 mb-4">
+          <div><div class="font-extrabold text-base" data-f="supplier">${s.name}</div>
+            <div class="text-[11px] text-slate-500" dir="ltr">${s.nameEn}</div>
+            <div class="text-[11px] text-slate-500 mt-1">س.ت: <span data-f="cr">${s.cr}</span></div>
+            <div class="text-[11px] text-slate-500">الرقم الضريبي: <span data-f="vat">${i.vat}</span></div></div>
+          <div class="text-left">
+            <div class="font-extrabold">فاتورة ضريبية</div><div class="text-[11px] text-slate-500">TAX INVOICE</div>
+            ${i.qr?`<div class="w-16 h-16 mt-2 bg-slate-900" data-f="qr" style="background-image:repeating-linear-gradient(0deg,#fff 0 3px,#111 3px 6px),repeating-linear-gradient(90deg,#fff 0 3px,#111 3px 6px);background-blend-mode:difference"></div>`
+              :`<div class="w-16 h-16 mt-2 border-2 border-dashed border-red-400 flex items-center justify-center text-[9px] text-red-500 text-center leading-tight">لا يوجد<br>QR</div>`}
+          </div>
+        </div>
+        <div class="grid grid-cols-2 gap-2 mb-4 text-[12px]">
+          <div>رقم الفاتورة: <b data-f="no">${i.id}</b></div>
+          <div>التاريخ: <b data-f="date">${dtBoth(i.date)}</b></div>
+          <div>العقد: <b data-f="contract">${i.contract||'—'}</b></div>
+          <div>المشروع: <b>${i.proj?projOf(i.proj).name:'—'}</b></div>
+        </div>
+        <table class="w-full text-[11px] border border-slate-300 mb-3">
+          <thead><tr class="bg-slate-100"><th class="border border-slate-300 p-1.5">البند</th><th class="border border-slate-300 p-1.5">الوحدة</th><th class="border border-slate-300 p-1.5">الكمية</th><th class="border border-slate-300 p-1.5">السعر</th><th class="border border-slate-300 p-1.5">الإجمالي</th></tr></thead>
+          <tbody>${i.lines.map((l,ix)=>`<tr data-f="line${ix}">
+            <td class="border border-slate-300 p-1.5">${l.code} — ${l.desc}</td>
+            <td class="border border-slate-300 p-1.5 text-center">${l.unit}</td>
+            <td class="border border-slate-300 p-1.5 text-center">${fmtNum(l.qty)}</td>
+            <td class="border border-slate-300 p-1.5 text-center">${fmtNum(l.price)}</td>
+            <td class="border border-slate-300 p-1.5 text-center">${fmtNum(l.total)}</td></tr>`).join('')}</tbody>
+        </table>
+        <div class="flex justify-end"><table class="text-[12px]">
+          <tr><td class="pl-6 py-0.5">المجموع قبل الضريبة</td><td class="font-bold" data-f="subtotal">${fmtNum(i.subtotal)}</td></tr>
+          <tr><td class="pl-6 py-0.5">ضريبة القيمة المضافة ١٥٪</td><td class="font-bold" data-f="vatamt">${fmtNum(i.vatAmt)}</td></tr>
+          <tr class="border-t border-slate-400"><td class="pl-6 py-1 font-extrabold">الإجمالي</td><td class="font-extrabold" data-f="total">${fmtNum(i.total)}</td></tr>
+        </table></div>
+      </div>
+      <div class="text-center text-xs text-slate-500 mt-3">صفحة ١ من ١ — مرّر المؤشر فوق أي حقل يميناً لتحديد موضعه في المستند</div>
+    </div>
+
+    <!-- fields pane -->
+    <div class="p-6 overflow-y-auto">
+      <div class="bg-amber-50 border border-amber-200 rounded-xl p-3 text-xs text-amber-900 mb-5">
+        القيمة الأصلية المستخرجة تُحفظ دائماً — التصحيح يُسجَّل بجانبها مع هوية المُصحِّح ووقت التصحيح، ولا يُستبدل بها.
+      </div>
+      <div class="grid grid-cols-2 gap-4 mb-5">
+        ${field('اسم المورد', s.name, 0.97,'supplier')}
+        ${field('الرقم الضريبي', i.vat, i.id==='INV-3301'?0.71:0.99,'vat')}
+        ${field('السجل التجاري', s.cr, 0.93,'cr')}
+        ${field('رقم الفاتورة', i.id, 0.98,'no')}
+        ${field('التاريخ (ميلادي)', i.date, 0.88,'date')}
+        ${field('مرجع العقد', i.contract||'—', i.contract?0.9:0.31,'contract')}
+        ${field('المجموع قبل الضريبة', fmtNum(i.subtotal), i.lowConf?0.58:0.96,'subtotal')}
+        ${field('ضريبة القيمة المضافة', fmtNum(i.vatAmt), 0.95,'vatamt')}
+        ${field('الإجمالي', fmtNum(i.total), i.lowConf?0.62:0.97,'total')}
+        ${field('رمز QR (TLV)', i.qr?'موجود — تم فك الترميز':'غير موجود', i.qr?0.99:0.2,'qr')}
+      </div>
+      <h4 class="font-extrabold text-brand-800 mb-2 text-sm">بنود الفاتورة</h4>
+      <div class="space-y-2 mb-5">
+        ${i.lines.map((l,ix)=>`
+          <div class="border ${l.conf<0.5?'border-red-300 bg-red-50':l.conf<0.75?'border-amber-300 bg-amber-50':'border-slate-200'} rounded-xl p-3"
+               onmouseenter="hlDoc('line${ix}',1)" onmouseleave="hlDoc('line${ix}',0)">
+            <div class="flex justify-between items-start mb-2">
+              <div class="text-sm font-bold">${l.code} — ${l.desc}</div>${confBar(l.conf)}
+            </div>
+            <div class="grid grid-cols-4 gap-2 text-xs">
+              <div><div class="text-slate-500 mb-0.5">الوحدة</div><input value="${l.unit}" class="w-full border border-slate-300 rounded-lg px-2 py-1.5"></div>
+              <div><div class="text-slate-500 mb-0.5">الكمية</div><input value="${l.qty}" class="w-full border border-slate-300 rounded-lg px-2 py-1.5"></div>
+              <div><div class="text-slate-500 mb-0.5">سعر الوحدة</div><input value="${l.price}" class="w-full border border-slate-300 rounded-lg px-2 py-1.5"></div>
+              <div><div class="text-slate-500 mb-0.5">الإجمالي</div><input value="${l.total}" class="w-full border border-slate-300 rounded-lg px-2 py-1.5"></div>
+            </div>
+            <div class="text-[11px] mt-2 ${l.match==='unmatched'?'text-red-600 font-bold':'text-slate-500'}">
+              ${l.match==='unmatched'?'⚠ لم تتم مطابقة البند بجدول الكميات — يتطلب اختياراً يدوياً'
+                :`مطابَق ببند العقد ${l.code} — مطابقة برمز البند (ثقة ١٠٠٪)`}
+            </div>
+          </div>`).join('')}
+      </div>
+    </div>
+  </div>
+  <div class="px-6 py-4 border-t border-slate-200 flex items-center justify-between shrink-0">
+    <div class="text-xs text-slate-500">${i.lowConf?'<b class="text-red-600">حقلان بثقة حرجة يمنعان المتابعة حتى التصحيح</b>':'كل الحقول ضمن حدود الثقة المقبولة'}</div>
+    <div class="flex gap-2">
+      <button onclick="closeModal()" class="px-4 py-2.5 rounded-xl border border-slate-300 font-bold text-sm">حفظ كمسودة</button>
+      <button onclick="closeModal();openInvoice('${k}')" class="px-5 py-2.5 rounded-xl bg-brand-800 text-white font-bold text-sm">اعتماد الحقول وتشغيل التحقق ←</button>
+    </div>
+  </div>`, 'w-full max-w-7xl h-[94vh]');
+}
+
+/* ── invoice detail ─────────────────────────────────────────────────────── */
+let TAB = 'summary';
+function openInvoice(k, tab){
+  TAB = tab||'summary';
+  const i = findInv(k), s = subOf(i.sub), c = i.contract?conOf(i.contract):null;
+  const blocking = (i.flags||[]).filter(f=>FLAGS[f.t].sev==='blocking').length;
+  const tabs = [['summary','الملخص'],['lines','البنود'],['flags',`الملاحظات (${fmtNum((i.flags||[]).length)})`],['zatca','التحقق الضريبي'],['history','السجل']];
+
+  showModal(mHead(`${i.id} — ${s.name}`, `${c?c.id+' · '+c.title:'بدون عقد مرتبط'} · ${dtBoth(i.date)}`) + `
+  <div class="px-6 pt-3 border-b border-slate-200 flex gap-1 shrink-0">
+    ${tabs.map(([t,l])=>`<button onclick="openInvoice('${k}','${t}')"
+      class="tab px-4 py-2.5 text-sm border-b-2 ${TAB===t?'active':'border-transparent text-slate-500 hover:text-slate-700'}">${l}</button>`).join('')}
+  </div>
+  <div class="flex-1 overflow-y-auto p-6">${invTab(i,s,c)}</div>
+  <div class="px-6 py-4 border-t border-slate-200 flex items-center justify-between shrink-0">
+    <div class="text-xs ${blocking?'text-red-600 font-bold':'text-emerald-600 font-bold'}">
+      ${blocking? `⛔ ${fmtNum(blocking)} ملاحظة حاجبة — الاعتماد للدفع محجوب حتى المعالجة` : '✓ لا توجد ملاحظات حاجبة'}
+    </div>
+    <div class="flex gap-2">
+      <button onclick="closeModal()" class="px-4 py-2.5 rounded-xl border border-slate-300 font-bold text-sm">إغلاق</button>
+      <button data-role="admin,reviewer" class="px-4 py-2.5 rounded-xl border border-slate-300 font-bold text-sm">رفض الفاتورة</button>
+      <button data-role="admin,reviewer" ${blocking?'disabled':''}
+        class="px-5 py-2.5 rounded-xl font-bold text-sm ${blocking?'bg-slate-200 text-slate-400 cursor-not-allowed':'bg-brand-800 text-white'}">اعتماد للدفع</button>
+    </div>
+  </div>`, 'w-full max-w-6xl h-[94vh]');
+  document.querySelectorAll('[data-role]').forEach(el=>{
+    el.style.display = el.dataset.role.split(',').includes(ME.role) ? '' : 'none';
+  });
+}
+
+function invTab(i,s,c){
+  if(TAB==='summary'){
+    const linesSum = i.lines.reduce((a,l)=>a+l.total,0);
+    const vatOk = Math.abs(i.vatAmt - i.subtotal*0.15) <= 1;
+    const totOk = Math.abs(i.subtotal + i.vatAmt - i.total) <= 1;
+    const sumOk = Math.abs(linesSum - i.subtotal) <= 1;
+    const chk = (ok,t,d) => `<div class="flex items-start gap-2.5 border ${ok?'border-emerald-200 bg-emerald-50':'border-red-200 bg-red-50'} rounded-xl p-3">
+      <div class="mt-0.5 ${ok?'text-emerald-600':'text-red-600'} font-extrabold">${ok?'✓':'✕'}</div>
+      <div><div class="text-sm font-bold ${ok?'text-emerald-800':'text-red-800'}">${t}</div><div class="text-xs text-slate-600 mt-0.5">${d}</div></div></div>`;
+    return `
+    <div class="grid grid-cols-1 lg:grid-cols-3 gap-4 mb-5">
+      <div class="bg-slate-50 rounded-2xl p-4"><div class="text-xs text-slate-500 mb-1">المجموع قبل الضريبة</div><div class="text-xl font-extrabold">${fmtMoney(i.subtotal)}</div></div>
+      <div class="bg-slate-50 rounded-2xl p-4"><div class="text-xs text-slate-500 mb-1">ضريبة القيمة المضافة (١٥٪)</div><div class="text-xl font-extrabold">${fmtMoney(i.vatAmt)}</div></div>
+      <div class="bg-brand-50 rounded-2xl p-4"><div class="text-xs text-brand-700 mb-1">الإجمالي</div><div class="text-xl font-extrabold text-brand-800">${fmtMoney(i.total)}</div></div>
+    </div>
+    <div class="grid grid-cols-1 lg:grid-cols-2 gap-4 mb-5">
+      <div class="border border-slate-200 rounded-2xl p-4 text-sm space-y-2">
+        <h4 class="font-extrabold text-brand-800 mb-2">بيانات الفاتورة</h4>
+        ${[['الحالة',badge(i.status)],['مقاول الباطن',s.name],['الرقم الضريبي',i.vat],['السجل التجاري',s.cr],
+           ['العقد',c?`${c.id} — ${c.title}`:'<span class="text-red-600 font-bold">لا يوجد عقد مطابق</span>'],
+           ['المشروع',i.proj?projOf(i.proj).name:'—'],['تاريخ الفاتورة',dtBoth(i.date)],
+           ['بصمة الملف',`<span dir="ltr" class="text-xs">SHA-256 ${i.hash}</span>`],
+           ['ثقة الاستخراج',confBar(i.conf)]].map(([k2,v])=>
+           `<div class="flex justify-between gap-3 border-b border-slate-100 pb-1.5"><span class="text-slate-500">${k2}</span><span class="font-semibold text-left">${v}</span></div>`).join('')}
+      </div>
+      <div class="space-y-2.5">
+        <h4 class="font-extrabold text-brand-800">فحوصات الفاتورة الضريبية</h4>
+        ${chk(i.qr,'وجود رمز QR','رمز الاستجابة السريعة مطلوب في الفاتورة الضريبية وفق متطلبات الفوترة الإلكترونية')}
+        ${chk(vatOk,'نسبة الضريبة ١٥٪',`المحتسب ${fmtMoney(i.subtotal*0.15)} — المدوّن ${fmtMoney(i.vatAmt)}`)}
+        ${chk(totOk,'تطابق الإجمالي',`${fmtNum(i.subtotal)} + ${fmtNum(i.vatAmt)} = ${fmtNum(i.subtotal+i.vatAmt)} — المدوّن ${fmtNum(i.total)}`)}
+        ${chk(sumOk,'مجموع البنود = المجموع قبل الضريبة',`مجموع البنود ${fmtNum(linesSum)} — المدوّن ${fmtNum(i.subtotal)}`)}
+        ${chk(/^3\d{13}3$/.test(i.vat),'صيغة الرقم الضريبي','١٥ خانة تبدأ وتنتهي بالرقم ٣')}
+      </div>
+    </div>`;
+  }
+
+  if(TAB==='lines'){
+    return `<table class="tbl w-full text-sm">
+      <thead><tr><th>رمز البند</th><th>الوصف</th><th>الوحدة</th><th>الكمية</th><th>سعر الوحدة</th><th>سعر العقد</th><th>الفرق</th><th>الإجمالي</th><th>المطابقة</th><th></th></tr></thead>
+      <tbody>${i.lines.map(l=>{
+        const b = i.contract? boqItem(i.contract,l.code) : null;
+        const dev = b? l.price-b.price : 0;
+        const pct = b&&b.price? dev/b.price*100 : 0;
+        return `<tr class="${l.issue?'bg-red-50/60':''}">
+          <td class="font-bold ${l.match==='unmatched'?'text-red-600':'text-brand-800'}">${l.code}</td>
+          <td class="max-w-xs">${l.desc}</td>
+          <td>${l.unit}</td>
+          <td>${fmtNum(l.qty)}</td>
+          <td class="font-semibold ${dev?'text-red-600':''}">${fmtNum(l.price)}</td>
+          <td class="text-slate-500">${b?fmtNum(b.price):'—'}</td>
+          <td class="${dev>0?'text-red-600 font-bold':dev<0?'text-amber-600 font-bold':'text-slate-400'}">${b?(dev?((dev>0?'+':'')+fmtNum(dev)+' ('+(dev>0?'+':'')+fmtPct(pct)+')'):'—'):'—'}</td>
+          <td class="font-semibold">${fmtMoney(l.total)}</td>
+          <td class="text-xs ${l.match==='unmatched'?'text-red-600 font-bold':'text-slate-500'}">${l.match==='unmatched'?'غير مطابق':'رمز البند'}</td>
+          <td class="text-left">${b?`<button onclick="openPrice('${l.code}')" class="text-xs text-brand-700 font-bold hover:underline whitespace-nowrap">تاريخ السعر</button>`:''}</td>
+        </tr>`}).join('')}</tbody>
+      <tfoot><tr class="bg-slate-50 font-extrabold"><td colspan="7">مجموع البنود</td><td>${fmtMoney(i.lines.reduce((a,l)=>a+l.total,0))}</td><td colspan="2"></td></tr></tfoot>
+    </table>
+    ${i.contract? `<div class="p-5"><h4 class="font-extrabold text-brand-800 mb-3">الكميات التراكمية مقابل العقد</h4>
+      <div class="space-y-3">${i.lines.filter(l=>boqItem(i.contract,l.code)).map(l=>{
+        const b = boqItem(i.contract,l.code);
+        const prior = b.invoicedQty, cur = l.qty, tot = prior+cur, over = tot>b.qty;
+        return `<div>
+          <div class="flex justify-between text-sm mb-1">
+            <span class="font-bold">${b.code} — ${b.ar}</span>
+            <span class="${over?'text-red-600 font-extrabold':'text-slate-600'}">${fmtNum(tot)} / ${fmtNum(b.qty)} ${b.unit}${over?` (تجاوز ${fmtNum(tot-b.qty)})`:''}</span>
+          </div>
+          <div class="h-3 bg-slate-100 rounded-full overflow-hidden flex">
+            <div class="h-full bg-brand-600" style="width:${Math.min(prior/b.qty*100,100)}%"></div>
+            <div class="h-full ${over?'bg-red-500':'bg-gold-500'}" style="width:${Math.min(cur/b.qty*100,100-Math.min(prior/b.qty*100,100))}%"></div>
+          </div>
+          <div class="text-[11px] text-slate-400 mt-1">مفوتر سابقاً ${fmtNum(prior)} · هذه الفاتورة ${fmtNum(cur)} · متبقٍ ${fmtNum(Math.max(b.qty-tot,0))}</div>
+        </div>`}).join('')}</div></div>`:''}`;
+  }
+
+  if(TAB==='flags'){
+    if(!(i.flags||[]).length) return `<div class="text-center py-16 text-slate-400">
+      <div class="text-5xl mb-3">✓</div><div class="font-bold text-emerald-600">لا توجد ملاحظات على هذه الفاتورة</div>
+      <div class="text-sm mt-1">اجتازت جميع فحوصات الالتزام الضريبي والتكرار وبنود جدول الكميات</div></div>`;
+    return `<div class="space-y-3">${i.flags.map((f,ix)=>{
+      const m = FLAGS[f.t];
+      return `<div class="border ${m.sev==='blocking'?'border-red-200':'border-amber-200'} rounded-2xl overflow-hidden">
+        <div class="${m.sev==='blocking'?'bg-red-50':'bg-amber-50'} px-4 py-3 flex items-center justify-between">
+          <div class="flex items-center gap-2.5">
+            ${sevPill(m.sev)}
+            <span class="font-extrabold ${m.sev==='blocking'?'text-red-800':'text-amber-900'}">${m.ar}</span>
+            ${f.line?`<span class="text-xs bg-white border border-slate-300 rounded px-2 py-0.5 font-bold">${f.line}</span>`:''}
+          </div>
+          <span class="text-xs text-slate-500">${m.cat}</span>
+        </div>
+        <div class="p-4 text-sm">
+          <p class="text-slate-700 leading-relaxed mb-3">${f.d}</p>
+          ${f.contracted!==undefined?`<div class="grid grid-cols-3 gap-2 mb-3 text-center">
+            <div class="bg-slate-50 rounded-xl p-2.5"><div class="text-xs text-slate-500">سعر العقد</div><div class="font-extrabold">${fmtMoney(f.contracted)}</div></div>
+            <div class="bg-red-50 rounded-xl p-2.5"><div class="text-xs text-red-600">السعر المفوتر</div><div class="font-extrabold text-red-700">${fmtMoney(f.invoiced)}</div></div>
+            <div class="bg-slate-50 rounded-xl p-2.5"><div class="text-xs text-slate-500">نسبة الفرق</div><div class="font-extrabold">+${fmtPct((f.invoiced-f.contracted)/f.contracted*100)}</div></div>
+          </div>`:''}
+          ${f.contracted!==undefined&&f.prior===undefined?`<button onclick="openPrice('${f.line}')" class="text-xs font-bold text-brand-700 hover:underline mb-3">عرض تاريخ سعر البند ↗</button>`:''}
+          ${f.prior!==undefined?`<div class="grid grid-cols-4 gap-2 mb-3 text-center text-xs">
+            <div class="bg-slate-50 rounded-xl p-2.5"><div class="text-slate-500">الكمية التعاقدية</div><div class="font-extrabold text-sm">${fmtNum(f.contracted)}</div></div>
+            <div class="bg-slate-50 rounded-xl p-2.5"><div class="text-slate-500">مفوتر سابقاً</div><div class="font-extrabold text-sm">${fmtNum(f.prior)}</div></div>
+            <div class="bg-slate-50 rounded-xl p-2.5"><div class="text-slate-500">هذه الفاتورة</div><div class="font-extrabold text-sm">${fmtNum(f.current)}</div></div>
+            <div class="bg-red-50 rounded-xl p-2.5"><div class="text-red-600">التجاوز</div><div class="font-extrabold text-sm text-red-700">${fmtNum(f.prior+f.current-f.contracted)}</div></div>
+          </div>`:''}
+          ${f.ref?`<button onclick="openDup('${invKey(i)}','${f.ref}')" class="text-xs font-bold text-brand-700 hover:underline mb-3">مقارنة بالفاتورة ${f.ref} ↗</button>`:''}
+          ${f.t==='vat_unverified'?`<button onclick="openZatca('${invKey(i)}')" class="text-xs font-bold text-brand-700 hover:underline mb-3">فتح شاشة التحقق من المكلف ↗</button>`:''}
+          <div class="border-t border-slate-200 pt-3 mt-1" data-role="admin,reviewer">
+            <div class="text-xs font-bold text-slate-600 mb-2">معالجة الملاحظة</div>
+            <div class="flex flex-wrap gap-2 mb-2">
+              <select class="border border-slate-300 rounded-lg px-3 py-2 text-xs flex-1 min-w-[200px]">
+                <option>اختر سبب المعالجة…</option>
+                ${m.cat==='تكرار'?'<option>ليست مكررة — فاتورة مستقلة لدفعة مختلفة</option><option>مكررة فعلاً — رفض الفاتورة</option>':''}
+                ${m.cat==='انحراف سعر'?'<option>سعر معتمد بأمر تغيير رقم …</option><option>خطأ من المورد — طلب فاتورة معدّلة</option>':''}
+                ${m.cat==='تجاوز كمية'?'<option>معتمد بأمر تغيير للكميات</option><option>خطأ في الكمية — طلب تعديل</option>':''}
+                ${m.cat==='ضريبية'?'<option>تم التحقق من المكلف لدى الهيئة</option><option>طلب فاتورة ضريبية نظامية من المورد</option>':''}
+                ${m.cat==='حسابية'?'<option>تم التصحيح بالاتفاق مع المورد</option><option>رفض — إعادة إصدار الفاتورة</option>':''}
+                ${m.cat==='بنود'?'<option>مطابقة يدوية ببند جدول الكميات</option><option>خارج نطاق العقد — رفض</option>':''}
+              </select>
+              <input placeholder="ملاحظة إلزامية تُحفظ في سجل التدقيق" class="border border-slate-300 rounded-lg px-3 py-2 text-xs flex-1 min-w-[200px]">
+            </div>
+            <div class="flex gap-2">
+              <button class="text-xs font-bold bg-brand-800 text-white rounded-lg px-3.5 py-2">قبول المعالجة</button>
+              <button class="text-xs font-bold border border-slate-300 rounded-lg px-3.5 py-2">رفض الفاتورة</button>
+              <span class="text-[11px] text-slate-400 self-center">تُسجَّل هوية المعالِج ووقت المعالجة والسبب تلقائياً</span>
+            </div>
+          </div>
+        </div>
+      </div>`}).join('')}</div>`;
+  }
+
+  if(TAB==='zatca'){
+    const ok = /^3\d{13}3$/.test(i.vat);
+    return `<div class="max-w-3xl space-y-4">
+      <div class="border ${ok?'border-emerald-200 bg-emerald-50':'border-red-200 bg-red-50'} rounded-2xl p-4">
+        <div class="font-extrabold ${ok?'text-emerald-800':'text-red-800'} mb-1">١) فحص صيغة الرقم الضريبي</div>
+        <div class="text-sm text-slate-700">الرقم المستخرج: <b dir="ltr">${i.vat}</b> — ${i.vat.length} خانة${ok?' · يبدأ وينتهي بالرقم ٣ ✓':' · المطلوب ١٥ خانة تبدأ وتنتهي بالرقم ٣ ✕'}</div>
+      </div>
+      <div class="border ${i.qr?'border-emerald-200 bg-emerald-50':'border-amber-200 bg-amber-50'} rounded-2xl p-4">
+        <div class="font-extrabold ${i.qr?'text-emerald-800':'text-amber-900'} mb-2">٢) قراءة رمز QR ومطابقة الحقول (TLV)</div>
+        ${i.qr? `<table class="w-full text-xs bg-white rounded-xl overflow-hidden">
+          <thead><tr class="bg-slate-100"><th class="p-2 text-right">الوسم</th><th class="p-2 text-right">الحقل</th><th class="p-2 text-right">قيمة الـ QR</th><th class="p-2 text-right">القيمة المستخرجة</th><th class="p-2">النتيجة</th></tr></thead>
+          <tbody>${[['١','اسم البائع',subOf(i.sub).name,subOf(i.sub).name],['٢','الرقم الضريبي',i.vat,i.vat],
+                    ['٣','ختم الوقت',i.date+'T09:14:00Z',i.date],['٤','الإجمالي شامل الضريبة',fmtNum(i.total),fmtNum(i.total)],
+                    ['٥','إجمالي الضريبة',fmtNum(i.vatAmt),fmtNum(i.vatAmt)]].map(r=>`
+            <tr class="border-t border-slate-100"><td class="p-2 font-bold">${r[0]}</td><td class="p-2">${r[1]}</td>
+            <td class="p-2 text-slate-600">${r[2]}</td><td class="p-2 text-slate-600">${r[3]}</td>
+            <td class="p-2 text-center text-emerald-600 font-bold">✓</td></tr>`).join('')}</tbody></table>
+          <div class="text-[11px] text-slate-500 mt-2">فك ترميز محلي بالكامل — لا تُرسل أي بيانات خارج النظام.</div>`
+        : '<div class="text-sm text-slate-700">لم يُعثر على رمز QR على المستند — تعذّرت المطابقة الآلية، ويُعتمد التحقق اليدوي أدناه.</div>'}
+      </div>
+      <div class="border border-brand-200 bg-brand-50 rounded-2xl p-4">
+        <div class="font-extrabold text-brand-800 mb-2">٣) التحقق من المكلف لدى هيئة الزكاة والضريبة والجمارك</div>
+        <p class="text-sm text-slate-700 mb-3">افتح بوابة "الاستعلام عن مكلف"، ابحث بالرقم الضريبي، ثم سجّل النتيجة أدناه. تُحفظ هوية المُتحقِّق ووقت التحقق في سجل التدقيق.</p>
+        <a href="https://zatca.gov.sa/ar/eServices/Pages/TaxpayerLookup.aspx" target="_blank" rel="noopener"
+           class="inline-block bg-brand-800 text-white text-sm font-bold rounded-xl px-4 py-2.5 mb-4">فتح بوابة الاستعلام عن مكلف ↗</a>
+        <div class="bg-white rounded-xl p-4 space-y-3" data-role="admin,reviewer">
+          <label class="flex items-center gap-2.5 text-sm font-semibold"><input type="checkbox" class="w-4 h-4"> الرقم الضريبي مسجّل ونشط لدى الهيئة</label>
+          <div><div class="text-xs font-bold text-slate-600 mb-1">الاسم النظامي كما ظهر في البوابة</div>
+            <input class="w-full border border-slate-300 rounded-lg px-3 py-2 text-sm" placeholder="انسخ الاسم كما ظهر بالضبط"></div>
+          <div><div class="text-xs font-bold text-slate-600 mb-1">مرفق إثبات (اختياري)</div>
+            <div class="border border-dashed border-slate-300 rounded-lg px-3 py-3 text-center text-xs text-slate-400">إرفاق لقطة شاشة من البوابة</div></div>
+          <button class="bg-brand-800 text-white text-sm font-bold rounded-xl px-4 py-2.5">تسجيل نتيجة التحقق</button>
+        </div>
+      </div>
+      <div class="text-xs text-slate-400">لم تُفعَّل الواجهة البرمجية الرسمية للهيئة — محوّل الاستراتيجية جاهز في الكود ولا يُستدعى أي واجهة غير موثقة.</div>
+    </div>`;
+  }
+
+  /* history */
+  const steps = [
+    ['رفع الملف','سارة الدوسري', i.date, 'تم حساب بصمة الملف والبصمة البصرية'],
+    ['استخراج البيانات','النظام', i.date, `المزوّد pdf-text · ثقة إجمالية ${Math.round(i.conf*100)}٪`],
+    ['مراجعة بشرية للحقول', i.status==='ocr_review'?'—':'محمد الشمري', i.date, i.status==='ocr_review'?'بانتظار المراجعة':'اعتُمدت الحقول المستخرجة'],
+    ['تشغيل محركات التحقق','النظام', i.date, `${fmtNum((i.flags||[]).length)} ملاحظة`],
+    ...(i.status==='approved'||i.status==='paid'||i.status==='archived'?[['الاعتماد للدفع','سارة الدوسري', i.date,'لا توجد ملاحظات حاجبة']]:[]),
+    ...(i.status==='paid'||i.status==='archived'?[['تسجيل السداد','خالد العصيمي', i.date,'حوالة بنكية']]:[]),
+    ...(i.status==='archived'?[['الأرشفة','النظام', i.date,'حفظ إلزامي ٦ سنوات — لا يمكن الحذف']]:[])
+  ];
+  return `<div class="max-w-2xl relative pr-8">
+    <div class="absolute right-[11px] top-2 bottom-2 w-0.5 bg-slate-200"></div>
+    ${steps.map((s2,ix)=>`<div class="relative mb-6">
+      <div class="absolute -right-8 top-1 w-6 h-6 rounded-full ${ix===steps.length-1?'bg-brand-800':'bg-white border-2 border-brand-300'} flex items-center justify-center">
+        ${ix===steps.length-1?'<div class="w-2 h-2 bg-white rounded-full"></div>':''}</div>
+      <div class="font-extrabold text-brand-800">${s2[0]}</div>
+      <div class="text-xs text-slate-400 mb-1">${s2[1]} · ${dtBoth(s2[2])}</div>
+      <div class="text-sm text-slate-600">${s2[3]}</div>
+    </div>`).join('')}
+    <p class="text-xs text-slate-400 mt-4">كل انتقال حالة يُسجَّل في <span dir="ltr">invoice_status_history</span> مع الفاعل والسبب والوقت، ويُنسخ إلى سجل التدقيق غير القابل للتعديل.</p>
+  </div>`;
+}
+
+/* ── duplicate comparison ───────────────────────────────────────────────── */
+function openDup(k, refId){
+  const a = findInv(k), b = INVOICES.find(x=>x.id===refId && invKey(x)!==k);
+  const row = (l,va,vb,same) => `<tr>
+    <td class="font-semibold text-slate-600">${l}</td>
+    <td class="${same?'':'text-red-600 font-bold'}">${va}</td>
+    <td class="${same?'':'text-red-600 font-bold'}">${vb}</td>
+    <td class="text-center">${same?'<span class="text-red-600 font-extrabold">مطابق</span>':'<span class="text-slate-400">مختلف</span>'}</td></tr>`;
+  showModal(mHead('مقارنة التكرار','قرار المراجع مطلوب قبل السماح بالصرف') + `
+  <div class="p-6 overflow-y-auto">
+    <div class="bg-red-50 border border-red-200 rounded-2xl p-4 mb-5">
+      <div class="font-extrabold text-red-800 mb-1">درجة التطابق ١٠٠٪ — تطابق تام + بصمة ملف متطابقة</div>
+      <div class="text-sm text-red-900">نفس الرقم الضريبي للمورد ونفس رقم الفاتورة، ونفس بصمة SHA-256 للملف المرفوع.</div>
+    </div>
+    <table class="tbl w-full text-sm mb-5">
+      <thead><tr><th>الحقل</th><th>الفاتورة قيد المراجعة</th><th>الفاتورة المسجلة</th><th>النتيجة</th></tr></thead>
+      <tbody>
+        ${row('رقم الفاتورة', a.id, b.id, true)}
+        ${row('الرقم الضريبي للمورد', a.vat, b.vat, true)}
+        ${row('مقاول الباطن', subOf(a.sub).name, subOf(b.sub).name, true)}
+        ${row('الإجمالي', fmtMoney(a.total), fmtMoney(b.total), true)}
+        ${row('عدد البنود', fmtNum(a.lines.length), fmtNum(b.lines.length), true)}
+        ${row('بصمة الملف', a.hash, b.hash, true)}
+        ${row('تاريخ الفاتورة', dt(a.date), dt(b.date), false)}
+        ${row('الحالة', STATUS[a.status].ar, STATUS[b.status].ar, false)}
+      </tbody>
+    </table>
+    <div class="border border-slate-200 rounded-2xl p-4" data-role="admin,reviewer">
+      <div class="font-bold text-sm mb-3">قرار المراجع</div>
+      <div class="space-y-2 mb-3 text-sm">
+        <label class="flex items-center gap-2.5"><input type="radio" name="dup"> ليست مكررة — فاتورة مستقلة (يتطلب سبباً مكتوباً)</label>
+        <label class="flex items-center gap-2.5"><input type="radio" name="dup" checked> مكررة فعلاً — رفض الفاتورة ومنع الصرف</label>
+      </div>
+      <input placeholder="سبب القرار — إلزامي ويُحفظ في سجل التدقيق" class="w-full border border-slate-300 rounded-lg px-3 py-2 text-sm mb-3">
+      <button onclick="closeModal()" class="bg-brand-800 text-white text-sm font-bold rounded-xl px-4 py-2.5">حفظ القرار</button>
+    </div>
+  </div>`, 'w-full max-w-3xl');
+  document.querySelectorAll('[data-role]').forEach(el=>{el.style.display = el.dataset.role.split(',').includes(ME.role)?'':'none'});
+}
+
+/* ── price history chart ────────────────────────────────────────────────── */
+function openPrice(code){
+  const h = PRICE_HISTORY[code] || [];
+  const item = Object.values(BOQ).flat().find(b=>b.code===code) || {ar:code, unit:''};
+  const W=560,H=220,PAD=40;
+  const ps = h.map(x=>x.p), min=Math.min(...ps)*0.95, max=Math.max(...ps)*1.05;
+  const X = ix => PAD + ix*(W-2*PAD)/Math.max(h.length-1,1);
+  const Y = p => H-PAD - (p-min)/(max-min||1)*(H-2*PAD);
+  showModal(mHead(`تاريخ سعر البند ${code}`, `${item.ar} · الوحدة: ${item.unit}`) + `
+  <div class="p-6 overflow-y-auto">
+    <svg viewBox="0 0 ${W} ${H}" class="w-full bg-slate-50 rounded-xl mb-4" dir="ltr">
+      <line x1="${PAD}" y1="${H-PAD}" x2="${W-PAD}" y2="${H-PAD}" stroke="#cbd5e1"/>
+      <line x1="${PAD}" y1="${PAD-15}" x2="${PAD}" y2="${H-PAD}" stroke="#cbd5e1"/>
+      <line x1="${PAD}" y1="${Y(h[0]?h[0].p:0)}" x2="${W-PAD}" y2="${Y(h[0]?h[0].p:0)}" stroke="#94a3b8" stroke-dasharray="4 4"/>
+      <text x="${W-PAD}" y="${Y(h[0]?h[0].p:0)-6}" font-size="10" fill="#64748b" text-anchor="end">سعر العقد</text>
+      <polyline fill="none" stroke="#215557" stroke-width="2.5" points="${h.map((x,ix)=>`${X(ix)},${Y(x.p)}`).join(' ')}"/>
+      ${h.map((x,ix)=>`<g>
+        <circle cx="${X(ix)}" cy="${Y(x.p)}" r="5" fill="${ix&&x.p!==h[ix-1].p?'#dc2626':'#215557'}"/>
+        <text x="${X(ix)}" y="${Y(x.p)-12}" font-size="11" font-weight="700" fill="${ix&&x.p!==h[ix-1].p?'#dc2626':'#215557'}" text-anchor="middle">${x.p.toFixed(2)}</text>
+        <text x="${X(ix)}" y="${H-PAD+16}" font-size="9" fill="#64748b" text-anchor="middle">${x.src}</text>
+        <text x="${X(ix)}" y="${H-PAD+28}" font-size="8" fill="#94a3b8" text-anchor="middle">${x.d}</text>
+      </g>`).join('')}
+    </svg>
+    <table class="tbl w-full text-sm">
+      <thead><tr><th>التاريخ</th><th>المصدر</th><th>سعر الوحدة</th><th>التغيّر</th></tr></thead>
+      <tbody>${h.map((x,ix)=>{
+        const d = ix? x.p-h[ix-1].p : 0;
+        return `<tr><td class="whitespace-nowrap">${dt(x.d)}</td><td class="font-semibold">${x.src}</td>
+        <td class="font-bold">${fmtMoney(x.p)}</td>
+        <td class="${d>0?'text-red-600 font-bold':d<0?'text-emerald-600 font-bold':'text-slate-400'}">${ix?(d?((d>0?'+':'')+fmtMoney(d)+' ('+(d>0?'+':'')+fmtPct(d/h[ix-1].p*100)+')'):'بدون تغيير'):'—'}</td></tr>`}).join('')}
+      </tbody>
+    </table>
+    <p class="text-xs text-slate-400 mt-3">يُبنى تاريخ السعر لكل بند لكل مقاول من سعر العقد عند الاستيراد ومن كل فاتورة معتمدة لاحقاً.</p>
+  </div>`, 'w-full max-w-3xl');
+}
+
+/* ── ZATCA shortcut ─────────────────────────────────────────────────────── */
+function openZatca(k){ openInvoice(k,'zatca'); }
+
+/* ── contract detail ────────────────────────────────────────────────────── */
+function openContract(id){
+  const c = conOf(id), items = BOQ[id]||[];
+  const invoiced = items.reduce((s,b)=>s+b.invoicedQty*b.price,0);
+  showModal(mHead(`${c.id} — ${c.title}`, `${projOf(c.proj).name} · ${subOf(c.sub).name}`) + `
+  <div class="p-6 overflow-y-auto">
+    <div class="grid grid-cols-2 lg:grid-cols-5 gap-3 mb-5 text-sm">
+      ${[['قيمة العقد',fmtMoney(c.value)],['المنفَّذ تقريبياً',fmtMoney(invoiced)],
+         ['المحتجز',fmtPct(c.retention)],['الدفعة المقدمة',fmtPct(c.advance)],
+         ['المدة',`${dt(c.start)}<br>${dt(c.end)}`]].map(([k2,v])=>
+        `<div class="bg-slate-50 rounded-xl p-3"><div class="text-xs text-slate-500 mb-1">${k2}</div><div class="font-extrabold text-brand-800 text-sm">${v}</div></div>`).join('')}
+    </div>
+    <div class="flex items-center justify-between mb-3">
+      <h4 class="font-extrabold text-brand-800">جدول الكميات (BoQ) — ${fmtNum(items.length)} بند</h4>
+      <button onclick="openBoqImport()" data-role="admin" class="text-xs font-bold text-brand-700 border border-brand-200 bg-brand-50 rounded-lg px-3 py-1.5">استيراد / تحديث من Excel</button>
+    </div>
+    <table class="tbl w-full text-sm">
+      <thead><tr><th>الرمز</th><th>الوصف</th><th>الوحدة</th><th>الكمية التعاقدية</th><th>سعر الوحدة</th><th>القيمة</th><th>المفوتر</th><th>نسبة التنفيذ</th><th></th></tr></thead>
+      <tbody>${items.map(b=>{
+        const pct = b.invoicedQty/b.qty*100, over = pct>100;
+        return `<tr>
+          <td class="font-bold text-brand-800">${b.code}</td>
+          <td class="max-w-xs"><div>${b.ar}</div><div class="text-xs text-slate-400" dir="ltr">${b.en}</div></td>
+          <td>${b.unit}</td><td>${fmtNum(b.qty)}</td>
+          <td class="font-semibold">${fmtNum(b.price)}</td>
+          <td class="font-semibold whitespace-nowrap">${fmtMoney(b.qty*b.price)}</td>
+          <td>${fmtNum(b.invoicedQty)}</td>
+          <td class="w-32"><div class="h-2.5 bg-slate-100 rounded-full overflow-hidden"><div class="h-full ${over?'bg-red-500':'bg-brand-600'}" style="width:${Math.min(pct,100)}%"></div></div>
+            <div class="text-[11px] ${over?'text-red-600 font-bold':'text-slate-400'} mt-0.5">${fmtPct(pct)}</div></td>
+          <td class="text-left">${PRICE_HISTORY[b.code]?`<button onclick="openPrice('${b.code}')" class="text-xs text-brand-700 font-bold hover:underline whitespace-nowrap">تاريخ السعر</button>`:''}</td>
+        </tr>`}).join('')}</tbody>
+    </table>
+    <h4 class="font-extrabold text-brand-800 mt-6 mb-3">فواتير هذا العقد</h4>
+    <table class="tbl w-full text-sm">
+      <thead><tr><th>الفاتورة</th><th>التاريخ</th><th>الإجمالي</th><th>الحالة</th><th>ملاحظات</th></tr></thead>
+      <tbody>${INVOICES.filter(i=>i.contract===id).map(i=>`<tr class="cursor-pointer" onclick="closeModal();openInvoice('${invKey(i)}')">
+        <td class="font-bold text-brand-800">${i.id}</td><td class="whitespace-nowrap text-slate-500">${dt(i.date)}</td>
+        <td class="font-semibold">${fmtMoney(i.total)}</td><td>${badge(i.status)}</td>
+        <td>${(i.flags||[]).length?`<span class="text-red-600 font-bold">${fmtNum(i.flags.length)}</span>`:'<span class="text-emerald-600">✓</span>'}</td></tr>`).join('')}</tbody>
+    </table>
+  </div>`, 'w-full max-w-6xl h-[94vh]');
+  document.querySelectorAll('[data-role]').forEach(el=>{el.style.display = el.dataset.role.split(',').includes(ME.role)?'':'none'});
+}
+
+/* ── BoQ Excel import wizard ────────────────────────────────────────────── */
+let STEP = 1;
+function openBoqImport(step){
+  STEP = step||1;
+  const nav = `<div class="flex items-center gap-2 px-6 py-4 border-b border-slate-200 shrink-0">
+    ${[[1,'رفع الملف'],[2,'مطابقة الأعمدة'],[3,'المعاينة والتأكيد']].map(([n,l])=>`
+      <div class="flex items-center gap-2 ${n<3?'flex-1':''}">
+        <div class="w-7 h-7 rounded-full text-xs font-extrabold flex items-center justify-center ${STEP>=n?'bg-brand-800 text-white':'bg-slate-200 text-slate-500'}">${n}</div>
+        <span class="text-sm font-bold ${STEP>=n?'text-brand-800':'text-slate-400'}">${l}</span>
+        ${n<3?`<div class="flex-1 h-0.5 ${STEP>n?'bg-brand-800':'bg-slate-200'}"></div>`:''}
+      </div>`).join('')}
+  </div>`;
+
+  let body='';
+  if(STEP===1) body = `<div class="p-6">
+    <div class="border-2 border-dashed border-brand-300 bg-brand-50/50 rounded-2xl p-10 text-center mb-4">
+      <div class="text-4xl mb-2">📊</div>
+      <div class="font-extrabold text-brand-800 mb-1">اسحب ملف Excel هنا</div>
+      <div class="text-sm text-slate-500 mb-4">‎.xlsx أو ‎.xls — الورقة الأولى افتراضياً</div>
+      <button onclick="openBoqImport(2)" class="bg-brand-800 text-white text-sm font-bold rounded-xl px-4 py-2">اختيار ملف</button>
+    </div>
+    <div class="flex items-center gap-3 border border-slate-200 rounded-xl px-4 py-3">
+      <div class="w-9 h-9 rounded-lg bg-emerald-50 text-emerald-700 flex items-center justify-center font-extrabold text-xs">XLS</div>
+      <div class="flex-1"><div class="font-bold text-sm" dir="ltr">BoQ_Structural_C-2025-014.xlsx</div>
+      <div class="text-xs text-slate-400">١٤٢ ك.ب · ورقة "BOQ" · ٥ صفوف بيانات</div></div>
+      <button onclick="openBoqImport(2)" class="text-xs font-bold text-brand-700">متابعة ←</button>
+    </div>
+  </div>`;
+
+  if(STEP===2){
+    const cols = [['رمز البند','item_code','Item Code'],['الوصف (عربي)','description_ar','الوصف'],
+      ['الوصف (إنجليزي)','description_en','Description'],['الوحدة','unit','Unit'],
+      ['الكمية التعاقدية','contracted_qty','Qty'],['سعر الوحدة','contracted_unit_price','Rate']];
+    body = `<div class="p-6">
+      <p class="text-sm text-slate-600 mb-4">طابق أعمدة الملف بحقول جدول الكميات. الحقول المطلوبة معلَّمة بـ <span class="text-red-500">*</span>.</p>
+      <div class="space-y-2.5">${cols.map(([ar,key,src])=>`
+        <div class="flex items-center gap-3 border border-slate-200 rounded-xl px-4 py-3">
+          <div class="w-44 shrink-0"><div class="font-bold text-sm">${ar}${key!=='description_en'?' <span class="text-red-500">*</span>':''}</div>
+          <div class="text-[11px] text-slate-400" dir="ltr">${key}</div></div>
+          <svg class="w-4 h-4 text-slate-300 shrink-0" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path d="M19 12H5m0 0 6-6m-6 6 6 6"/></svg>
+          <select class="flex-1 border border-slate-300 rounded-lg px-3 py-2 text-sm">
+            <option>${src}</option><option>— تجاهل هذا الحقل —</option>
+          </select>
+          <span class="text-xs font-bold text-emerald-600 shrink-0">مطابَق ✓</span>
+        </div>`).join('')}</div>
+      <div class="flex justify-between mt-5">
+        <button onclick="openBoqImport(1)" class="px-4 py-2.5 rounded-xl border border-slate-300 font-bold text-sm">→ رجوع</button>
+        <button onclick="openBoqImport(3)" class="px-5 py-2.5 rounded-xl bg-brand-800 text-white font-bold text-sm">معاينة البيانات ←</button>
+      </div>
+    </div>`;
+  }
+
+  if(STEP===3){
+    const items = BOQ['C-2025-014'];
+    body = `<div class="p-6">
+      <div class="flex gap-3 mb-4">
+        <div class="flex-1 bg-emerald-50 border border-emerald-200 rounded-xl p-3 text-center"><div class="text-2xl font-extrabold text-emerald-700">${fmtNum(items.length)}</div><div class="text-xs text-emerald-800">صف صالح</div></div>
+        <div class="flex-1 bg-amber-50 border border-amber-200 rounded-xl p-3 text-center"><div class="text-2xl font-extrabold text-amber-700">١</div><div class="text-xs text-amber-800">تحذير — وحدة غير معيارية</div></div>
+        <div class="flex-1 bg-red-50 border border-red-200 rounded-xl p-3 text-center"><div class="text-2xl font-extrabold text-red-700">٠</div><div class="text-xs text-red-800">صف مرفوض</div></div>
+      </div>
+      <table class="tbl w-full text-sm">
+        <thead><tr><th>#</th><th>الرمز</th><th>الوصف</th><th>الوحدة</th><th>الكمية</th><th>سعر الوحدة</th><th>القيمة</th><th>الحالة</th></tr></thead>
+        <tbody>${items.map((b,ix)=>`<tr>
+          <td class="text-slate-400">${fmtNum(ix+1)}</td>
+          <td class="font-bold text-brand-800">${b.code}</td>
+          <td class="max-w-xs">${b.ar}</td><td>${b.unit}</td>
+          <td>${fmtNum(b.qty)}</td><td>${fmtNum(b.price)}</td>
+          <td class="font-semibold whitespace-nowrap">${fmtMoney(b.qty*b.price)}</td>
+          <td>${ix===2?'<span class="text-xs font-bold text-amber-700">تحذير: "م٢" ← تُطبَّع إلى م²</span>':'<span class="text-xs font-bold text-emerald-600">صالح ✓</span>'}</td>
+        </tr>`).join('')}</tbody>
+        <tfoot><tr class="bg-slate-50 font-extrabold"><td colspan="6">إجمالي قيمة جدول الكميات</td><td colspan="2">${fmtMoney(items.reduce((s,b)=>s+b.qty*b.price,0))}</td></tr></tfoot>
+      </table>
+      <div class="bg-slate-50 rounded-xl p-3 text-xs text-slate-600 mt-4">
+        عند التأكيد: تُنشأ بنود جدول الكميات ويُسجَّل سعر كل بند كنقطة بداية في تاريخ الأسعار، وتُكتب عملية الاستيراد في سجل التدقيق.
+      </div>
+      <div class="flex justify-between mt-5">
+        <button onclick="openBoqImport(2)" class="px-4 py-2.5 rounded-xl border border-slate-300 font-bold text-sm">→ رجوع</button>
+        <button onclick="closeModal()" class="px-5 py-2.5 rounded-xl bg-brand-800 text-white font-bold text-sm">تأكيد الاستيراد (${fmtNum(items.length)} بند)</button>
+      </div>
+    </div>`;
+  }
+
+  showModal(mHead('استيراد جدول كميات من Excel','العقد C-2025-014 — أعمال الخرسانة والهيكل الإنشائي') + nav +
+    `<div class="flex-1 overflow-y-auto">${body}</div>`, 'w-full max-w-4xl max-h-[92vh]');
+}
+
+/* ── register pages that need post-render hooks ─────────────────────────── */
+const _archive = PAGES.archive;
+PAGES.archive = () => { setTimeout(renderResults,0); return _archive(); };
+</script>
+</body>
+</html>
