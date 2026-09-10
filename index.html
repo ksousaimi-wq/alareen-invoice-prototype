@@ -704,7 +704,11 @@ const SETTINGS = [
   {k:'حد المطابقة الضبابية لبنود BoQ', v:'٠٫٨٠', key:'boq_fuzzy_match_threshold'},
   {k:'حد الثقة المنخفضة في الاستخراج', v:'٠٫٧٥', key:'ocr_low_confidence'},
   {k:'حد الثقة الحرجة (حاجب)', v:'٠٫٥٠', key:'ocr_critical_confidence'},
-  {k:'مدة حفظ السجلات', v:'٦ سنوات', key:'record_retention_years'}
+  {k:'مدة حفظ السجلات', v:'٦ سنوات', key:'record_retention_years'},
+  {k:'الحد الأدنى لعروض الأسعار', v:'٣ عروض', key:'proc_min_quotes'},
+  {k:'حد اجتياز التقييم الفني', v:'٧٠٪', key:'proc_tech_pass_pct'},
+  {k:'وزن التقييم الفني / التجاري', v:'٦٠٪ / ٤٠٪', key:'proc_weights'},
+  {k:'سلسلة اعتماد أمر الشراء', v:'≤ ١٠٠ ألف: مدير المشتريات · ≤ ٥٠٠ ألف: + المدير المالي · أعلى: + المدير العام', key:'proc_approval_chain'}
 ];
 
 /* ── session ────────────────────────────────────────────────────────────── */
@@ -714,6 +718,7 @@ const can = w => w==='view' ? true : ME.role!=='viewer' && (w!=='admin' || ME.ro
 const NAV = [
   {k:'dashboard', ar:'لوحة المعلومات', en:'Dashboard', icon:'M3 12h6v9H3zM10 3h6v18h-6zM17 8h4v13h-4z'},
   {k:'invoices',  ar:'الفواتير',       en:'Invoices',  icon:'M6 2h9l5 5v15H6zM15 2v5h5'},
+  {k:'procurement', ar:'المشتريات', en:'Procurement', icon:'M3 4h2l2.5 11h11L21 7H7M9 20a1 1 0 100-2 1 1 0 000 2zm8 0a1 1 0 100-2 1 1 0 000 2z'},
   {k:'contracts', ar:'العقود وجداول الكميات', en:'Contracts & BoQ', icon:'M7 3h10v18l-5-3-5 3zM9 8h6M9 12h6'},
   {k:'subs',      ar:'مقاولو الباطن',  en:'Subcontractors', icon:'M12 12a4 4 0 100-8 4 4 0 000 8zM4 21a8 8 0 0116 0'},
   {k:'projects',  ar:'المشاريع',       en:'Projects',  icon:'M3 21h18M5 21V8l7-5 7 5v13M10 21v-6h4v6'},
@@ -785,6 +790,7 @@ const PAGES = {};
 const PRIMARY = {
   dashboard:['رفع فاتورة','openUpload()',['admin','reviewer']],
   invoices: ['رفع فاتورة','openUpload()',['admin','reviewer']],
+  procurement: ['طلب شراء جديد','openNewPR()',['admin','reviewer']],
   archive:  ['رفع فاتورة','openUpload()',['admin','reviewer']],
   contracts:['عقد جديد','openNewContract()',['admin']],
   subs:     ['مقاول باطن جديد','openNewSub()',['admin']],
@@ -913,6 +919,14 @@ PAGES.dashboard = () => {
         <td class="font-bold">${fmtMoney(s.v)}</td></tr>`).join('')}</tbody></table></div>`)}
   </div>
 
+  ${section('المشتريات — نظرة سريعة', `<div class="p-5 grid grid-cols-2 lg:grid-cols-4 gap-3">
+    ${[['طلبات شراء مفتوحة', PRS.filter(p=>!['po_issued','cancelled','draft'].includes(p.status)).length],
+       ['بانتظار عروض الأسعار', PRS.filter(p=>p.status==='rfq_sent').length],
+       ['قيد التقييم / الاعتماد', PRS.filter(p=>['tech_eval','comm_eval','po_approval'].includes(p.status)).length]].map(([t,v])=>`
+      <div class="bg-slate-50 rounded-xl p-3"><div class="text-xs text-slate-500">${t}</div><div class="text-2xl font-extrabold text-brand-800">${fmtNum(v)}</div></div>`).join('')}
+    <div class="bg-brand-50 rounded-xl p-3"><div class="text-xs text-brand-700">أوامر شراء صادرة هذا العام</div><div class="text-lg font-extrabold text-brand-800">${fmtMoney(PRS.filter(p=>p.po).reduce((a,p)=>a+p.po.grand,0))}</div></div>
+  </div>`, `<button onclick="go('procurement')" class="text-xs font-bold text-brand-700 hover:underline">فتح المشتريات ←</button>`)}
+  <div class="mb-6"></div>
   ${section('يتطلب إجراءً', `<div class="tbl-wrap"><table class="tbl w-full text-sm">
     <thead><tr><th>الفاتورة</th><th>المقاول</th><th>التاريخ</th><th>المبلغ</th><th>الملاحظات</th><th></th></tr></thead>
     <tbody>${INVOICES.filter(i=>['flagged','ocr_review'].includes(i.status)).map(i=>`
@@ -1918,6 +1932,441 @@ function saveNewUser(){
   const u={id:'u'+(USERS.length+1), name:f.name, email:f.email, role:f.role, title:f.title||ROLE_AR[f.role]};
   USERS.push(u); logAudit('دعوة مستخدم', u.id, `${u.name} — ${u.email} — ${ROLE_AR[u.role]}`);
   toast(`أُرسلت الدعوة إلى ${u.email}`); closeModal(); go('users');
+}
+
+/* ═══════════════════════════════════════════════════════════════════════════
+   PROCUREMENT — طلب شراء ← طلب عروض أسعار ← ٣ عروض ← تقييم فني ← تقييم تجاري
+                 ← سلسلة اعتماد ← أمر شراء
+   ═══════════════════════════════════════════════════════════════════════════ */
+const VENDORS = [
+ {id:'V-01', name:'شركة الكابلات السعودية',            cat:'كهرباء',  vat:'300456789100003', cr:'1010456789', city:'جدة'},
+ {id:'V-02', name:'مؤسسة النور للتجهيزات الكهربائية',   cat:'كهرباء',  vat:'310987654300003', cr:'1010987654', city:'الرياض'},
+ {id:'V-03', name:'شركة الخليج للتوريدات الصناعية',     cat:'عام',     vat:'300246813500003', cr:'4030246813', city:'الدمام'},
+ {id:'V-04', name:'مصنع الشرق للخرسانة الجاهزة',        cat:'خرسانة',  vat:'311357924600003', cr:'2050357924', city:'الدمام'},
+ {id:'V-05', name:'شركة البناء الحديث للخرسانة',        cat:'خرسانة',  vat:'300864209700003', cr:'1010864209', city:'الرياض'},
+ {id:'V-06', name:'مؤسسة الأمان لمعدات السلامة',        cat:'سلامة',   vat:'310159753800003', cr:'1010159753', city:'الرياض'},
+ {id:'V-07', name:'شركة الحديد الوطنية',                cat:'حديد',    vat:'300753159200003', cr:'2050753159', city:'الجبيل'},
+ {id:'V-08', name:'مؤسسة الفولاذ العربي',               cat:'حديد',    vat:'310951357400003', cr:'1010951357', city:'الرياض'},
+ {id:'V-09', name:'شركة العزل المتقدم',                 cat:'عزل',     vat:'300135792600003', cr:'4030135792', city:'جدة'},
+ {id:'V-10', name:'مؤسسة الحماية لأعمال العزل',         cat:'عزل',     vat:'310246801300003', cr:'1010246801', city:'الرياض'}
+];
+const vendorOf = id => VENDORS.find(v=>v.id===id)||{name:'—'};
+const PR_STATUS = {
+  draft:      {ar:'مسودة',                      cls:'bg-slate-100 text-slate-700'},
+  pr_approval:{ar:'بانتظار اعتماد الطلب',        cls:'bg-amber-100 text-amber-800'},
+  approved:   {ar:'معتمد — بانتظار طلب العروض',  cls:'bg-amber-100 text-amber-800'},
+  rfq_sent:   {ar:'طلب عروض مُرسل',              cls:'bg-blue-100 text-blue-700'},
+  tech_eval:  {ar:'التقييم الفني',               cls:'bg-brand-100 text-brand-800'},
+  comm_eval:  {ar:'التقييم التجاري',             cls:'bg-brand-100 text-brand-800'},
+  po_approval:{ar:'بانتظار اعتماد أمر الشراء',   cls:'bg-amber-100 text-amber-800'},
+  po_issued:  {ar:'أمر شراء صادر',               cls:'bg-emerald-100 text-emerald-700'},
+  cancelled:  {ar:'ملغى',                        cls:'bg-slate-200 text-slate-600'}
+};
+const PR_STAGES = [['pr_approval','اعتماد الطلب'],['rfq_sent','طلب العروض'],['tech_eval','التقييم الفني'],['comm_eval','التقييم التجاري'],['po_approval','اعتماد الشراء'],['po_issued','أمر الشراء']];
+const stageIdx = st => ({draft:-1, pr_approval:0, approved:0, rfq_sent:1, tech_eval:2, comm_eval:3, po_approval:4, po_issued:5, cancelled:-1})[st];
+/* thresholds — mirrored in the settings screen; editable by Admin in production */
+const PROC = { minQuotes:3, techPass:70, wTech:60, wComm:40,
+  chain:[{max:100000, steps:['مدير المشتريات']},{max:500000, steps:['مدير المشتريات','المدير المالي']},{max:Infinity, steps:['مدير المشتريات','المدير المالي','المدير العام']}] };
+const TECH = [{k:'spec',ar:'مطابقة المواصفات الفنية',w:40},{k:'delivery',ar:'مدة التوريد',w:20},{k:'exp',ar:'الخبرة والمشاريع السابقة',w:20},{k:'warranty',ar:'الضمان وخدمة ما بعد البيع',w:20}];
+
+const PRS = [
+ {id:'PR-2026-015', title:'حديد تسليح عالي المقاومة — الدفعة الثالثة', proj:'P-001', dept:'الإنشاءات', by:'محمد الشمري', date:'2026-06-14', need:'2026-07-15', status:'po_issued',
+  just:'استكمال أعمال تسليح الأسقف من الدور الثامن إلى الثاني عشر حسب البرنامج الزمني المعتمد.',
+  lines:[{item:'حديد تسليح قطر ١٦ مم', spec:'SASO / ASTM A615 Grade 60', unit:'طن', qty:280, est:3150},{item:'حديد تسليح قطر ٢٥ مم', spec:'SASO / ASTM A615 Grade 60', unit:'طن', qty:190, est:3150}],
+  rfq:{sent:'2026-06-16', vendors:['V-03','V-07','V-08']},
+  quotes:[
+    {vendor:'V-03', date:'2026-06-21', valid:'2026-08-21', days:14, terms:'٣٠ يوماً من الاستلام', prices:[3080,3095], tech:{spec:9,delivery:8,exp:9,warranty:9}},
+    {vendor:'V-07', date:'2026-06-22', valid:'2026-08-15', days:21, terms:'٥٠٪ مقدم · ٥٠٪ عند التسليم', prices:[3120,3120], tech:{spec:8,delivery:7,exp:8,warranty:8}},
+    {vendor:'V-08', date:'2026-06-23', valid:'2026-08-30', days:18, terms:'٤٥ يوماً', prices:[3095,3110], tech:{spec:8,delivery:8,exp:7,warranty:8}}],
+  award:{vendor:'V-03', reason:'أعلى درجة مجمّعة وأقل سعر بين العروض المؤهلة فنياً.', by:'خالد العصيمي', at:'2026-06-27 10:40'},
+  approvals:[{role:'مدير المشتريات',by:'خالد العصيمي',at:'2026-06-28 09:12'},{role:'المدير المالي',by:'سارة الدوسري',at:'2026-06-30 14:05'},{role:'المدير العام',by:'عبدالله العرين',at:'2026-07-01 11:30'}],
+  po:{id:'PO-2026-009', date:'2026-07-02', vendor:'V-03', delivery:'2026-07-20', by:'خالد العصيمي'},
+  events:[['إنشاء طلب الشراء','محمد الشمري','2026-06-14 09:20','قيمة تقديرية ١٬٤٨٠٬٥٠٠ ر.س'],['اعتماد الطلب','خالد العصيمي','2026-06-15 13:02',''],['إرسال طلب عروض الأسعار','خالد العصيمي','2026-06-16 10:15','٣ موردين'],['استلام ٣ عروض','النظام','2026-06-23 16:40','اكتمل الحد الأدنى'],['اعتماد التقييم الفني','محمد الشمري','2026-06-25 12:00','٣ عروض مؤهلة'],['الترسية','خالد العصيمي','2026-06-27 10:40','شركة الخليج للتوريدات الصناعية'],['اعتماد أمر الشراء','المدير العام','2026-07-01 11:30','اكتملت سلسلة الاعتماد'],['إصدار أمر الشراء','خالد العصيمي','2026-07-02 08:30','PO-2026-009']]},
+
+ {id:'PR-2026-018', title:'كابلات نحاس ولوحات توزيع — المرحلة الثانية', proj:'P-002', dept:'الكهرباء', by:'سارة الدوسري', date:'2026-08-03', need:'2026-09-30', status:'comm_eval',
+  just:'تغذية المرحلة الثانية من المجمع التجاري؛ الكميات حسب المخططات المعتمدة E-204 إلى E-219.',
+  lines:[{item:'كابل نحاس معزول ٤×٩٥ مم²', spec:'XLPE/PVC 0.6/1kV — IEC 60502', unit:'م.ط', qty:4200, est:118},{item:'لوحة توزيع رئيسية ٤٠٠ أمبير', spec:'Form 3b · IP54 · شهادة سابر', unit:'عدد', qty:6, est:18500},{item:'مواسير PVC قطر ٢٥ مم', spec:'ثقيلة الوزن — SASO', unit:'م.ط', qty:9500, est:14.25}],
+  rfq:{sent:'2026-08-06', vendors:['V-01','V-02','V-03']},
+  quotes:[
+    {vendor:'V-01', date:'2026-08-12', valid:'2026-10-15', days:21, terms:'٣٠ يوماً من الاستلام', prices:[121,19200,13.9], tech:{spec:9,delivery:8,exp:9,warranty:8}},
+    {vendor:'V-02', date:'2026-08-13', valid:'2026-09-30', days:35, terms:'٥٠٪ مقدم', prices:[116,18200,13.2], tech:{spec:7,delivery:5,exp:6,warranty:6}},
+    {vendor:'V-03', date:'2026-08-14', valid:'2026-10-31', days:18, terms:'٤٥ يوماً', prices:[124,19800,14.1], tech:{spec:8,delivery:9,exp:7,warranty:7}}],
+  events:[['إنشاء طلب الشراء','سارة الدوسري','2026-08-03 11:05',''],['اعتماد الطلب','خالد العصيمي','2026-08-04 09:40',''],['إرسال طلب عروض الأسعار','خالد العصيمي','2026-08-06 10:00','٣ موردين'],['استلام ٣ عروض','النظام','2026-08-14 15:20','اكتمل الحد الأدنى'],['اعتماد التقييم الفني','محمد الشمري','2026-08-18 13:30','عرض واحد لم يجتز الحد ٧٠٪']]},
+
+ {id:'PR-2026-019', title:'عزل حراري لأسطح الأبراج', proj:'P-001', dept:'التشطيبات', by:'محمد الشمري', date:'2026-08-10', need:'2026-10-15', status:'tech_eval',
+  just:'عزل الأسطح قبل موسم الأمطار وفق اشتراطات كود البناء السعودي للعزل الحراري.',
+  lines:[{item:'عزل حراري بولي يوريثان سماكة ٥ سم', spec:'كثافة ٤٠ كجم/م³ — SBC 602', unit:'م²', qty:4200, est:46},{item:'طبقة حماية وميول', spec:'مونة إسمنتية خفيفة', unit:'م²', qty:4200, est:12}],
+  rfq:{sent:'2026-08-12', vendors:['V-09','V-10','V-03']},
+  quotes:[
+    {vendor:'V-09', date:'2026-08-19', valid:'2026-10-19', days:25, terms:'٣٠ يوماً', prices:[44,11.5], tech:{spec:9,delivery:8,exp:8,warranty:9}},
+    {vendor:'V-10', date:'2026-08-20', valid:'2026-10-10', days:30, terms:'٤٠٪ مقدم', prices:[47,12], tech:null},
+    {vendor:'V-03', date:'2026-08-21', valid:'2026-11-01', days:28, terms:'٤٥ يوماً', prices:[45,11], tech:null}],
+  events:[['إنشاء طلب الشراء','محمد الشمري','2026-08-10 08:50',''],['اعتماد الطلب','خالد العصيمي','2026-08-11 10:10',''],['إرسال طلب عروض الأسعار','خالد العصيمي','2026-08-12 09:00','٣ موردين'],['استلام ٣ عروض','النظام','2026-08-21 17:05','اكتمل الحد الأدنى'],['بدء التقييم الفني','محمد الشمري','2026-08-24 09:30','']]},
+
+ {id:'PR-2026-021', title:'خرسانة جاهزة C40 / C30 — أساسات البرج الثالث', proj:'P-001', dept:'الإنشاءات', by:'محمد الشمري', date:'2026-08-20', need:'2026-09-25', status:'rfq_sent',
+  just:'صبّ أساسات البرج الثالث حسب البرنامج الزمني؛ يلزم مورد مؤهل بخلاطة احتياطية.',
+  lines:[{item:'خرسانة جاهزة C40', spec:'هبوط ١٠±٢ سم · SRC', unit:'م³', qty:1800, est:320},{item:'خرسانة جاهزة C30', spec:'هبوط ١٠±٢ سم · OPC', unit:'م³', qty:600, est:285}],
+  rfq:{sent:'2026-08-24', vendors:['V-04','V-05','V-03']},
+  quotes:[
+    {vendor:'V-04', date:'2026-08-29', valid:'2026-10-29', days:7, terms:'٣٠ يوماً', prices:[312,278], tech:null},
+    {vendor:'V-05', date:'2026-08-31', valid:'2026-10-15', days:5, terms:'١٥ يوماً', prices:[305,281], tech:null}],
+  events:[['إنشاء طلب الشراء','محمد الشمري','2026-08-20 10:00',''],['اعتماد الطلب','خالد العصيمي','2026-08-22 12:30',''],['إرسال طلب عروض الأسعار','خالد العصيمي','2026-08-24 09:15','٣ موردين']]},
+
+ {id:'PR-2026-023', title:'معدات سلامة ووقاية شخصية', proj:'P-002', dept:'السلامة', by:'سارة الدوسري', date:'2026-09-01', need:'2026-09-20', status:'rfq_sent',
+  just:'تجديد معدات الوقاية الشخصية للعمالة الجديدة وفق اشتراطات السلامة في الموقع.',
+  lines:[{item:'خوذ سلامة', spec:'ANSI Z89.1', unit:'عدد', qty:400, est:35},{item:'سترات عاكسة', spec:'Class 2', unit:'عدد', qty:400, est:28},{item:'أحذية سلامة', spec:'S3 · مقدمة فولاذية', unit:'زوج', qty:400, est:95}],
+  rfq:{sent:'2026-09-04', vendors:['V-06','V-03','V-02']}, quotes:[],
+  events:[['إنشاء طلب الشراء','سارة الدوسري','2026-09-01 09:00',''],['اعتماد الطلب','خالد العصيمي','2026-09-02 15:20',''],['إرسال طلب عروض الأسعار','خالد العصيمي','2026-09-04 10:30','٣ موردين']]},
+
+ {id:'PR-2026-025', title:'مضخات مياه غاطسة لخزانات البرج الأول', proj:'P-001', dept:'الميكانيكا', by:'محمد الشمري', date:'2026-09-07', need:'2026-10-30', status:'pr_approval',
+  just:'استبدال المضخات المؤقتة بالمضخات الدائمة حسب المواصفات الميكانيكية M-11.',
+  lines:[{item:'مضخة غاطسة ١٥ حصان', spec:'Grundfos أو ما يعادلها · ٣ فاز', unit:'عدد', qty:4, est:28500},{item:'لوحة تحكم وحماية', spec:'مع بادئ ناعم', unit:'عدد', qty:2, est:9800}],
+  quotes:[], events:[['إنشاء طلب الشراء','محمد الشمري','2026-09-07 14:10',''],['إرسال للاعتماد','محمد الشمري','2026-09-07 14:12','']]},
+
+ {id:'PR-2026-026', title:'أثاث مكاتب موقع المشروع', proj:'P-002', dept:'الشؤون الإدارية', by:'سارة الدوسري', date:'2026-09-09', need:'2026-10-15', status:'draft',
+  just:'تجهيز مكاتب الإشراف في الموقع.',
+  lines:[{item:'مكتب إداري', spec:'١٦٠×٨٠ سم', unit:'عدد', qty:12, est:1800},{item:'كرسي مكتب', spec:'شبكي بمساند', unit:'عدد', qty:24, est:450},{item:'خزانة ملفات', spec:'معدنية ٤ أدراج', unit:'عدد', qty:6, est:1100}],
+  quotes:[], events:[['إنشاء طلب الشراء (مسودة)','سارة الدوسري','2026-09-09 16:45','']]}
+];
+const findPR  = id => PRS.find(p=>p.id===id);
+const prEst   = pr => pr.lines.reduce((a,l)=>a+l.qty*(+l.est||0),0);
+const qTotal  = (pr,q) => pr.lines.reduce((a,l,ix)=>a+l.qty*(+q.prices[ix]||0),0);
+const techPct = q => q.tech ? TECH.reduce((a,c)=>a+(+q.tech[c.k]||0)*c.w/10,0) : null;
+const qualified = pr => pr.quotes.filter(q=>techPct(q)!==null && techPct(q)>=PROC.techPass);
+function commRows(pr){
+  const qs = qualified(pr); if(!qs.length) return [];
+  const low = Math.min(...qs.map(q=>qTotal(pr,q)));
+  return qs.map(q=>{ const t=qTotal(pr,q), comm=low/t*100, tech=techPct(q); return {q, total:t, comm, tech, score:PROC.wTech*tech/100+PROC.wComm*comm/100, lowest:t===low}; })
+           .sort((a,b)=>b.score-a.score);
+}
+const chainFor = grand => PROC.chain.find(c=>grand<=c.max).steps;
+const prValue  = pr => pr.award ? qTotal(pr, pr.quotes.find(q=>q.vendor===pr.award.vendor)) : prEst(pr);
+const prBadge  = st => `<span class="text-xs font-bold px-2.5 py-1 rounded-full ${PR_STATUS[st].cls}">${PR_STATUS[st].ar}</span>`;
+const prStepper = st => { const ix=stageIdx(st); return `<div class="flex items-center gap-1" title="${PR_STAGES.map(x=>x[1]).join(' ← ')}">${PR_STAGES.map((x,i)=>`<div class="w-2.5 h-2.5 rounded-full ${i<ix?'bg-brand-700':i===ix?'bg-gold-500':'bg-slate-200'}"></div>`).join('')}</div>`; };
+function prEvent(pr,title,detail){ (pr.events=pr.events||[]).push([title, ME.name, nowStr(), detail||'']); logAudit(title, pr.id, detail||''); }
+
+/* ── page ── */
+PAGES.procurement = () => {
+  const open = PRS.filter(p=>!['po_issued','cancelled','draft'].includes(p.status));
+  const nextStep = p => ({draft:'إرسال للاعتماد', pr_approval:'اعتماد الطلب', approved:'إرسال طلب العروض', rfq_sent:p.quotes.length>=PROC.minQuotes?'بدء التقييم الفني':`بانتظار العروض (${fmtNum(p.quotes.length)} من ${fmtNum(PROC.minQuotes)})`, tech_eval:'إكمال التقييم الفني', comm_eval:'الترسية ورفعها للاعتماد', po_approval:'اعتماد أمر الشراء', po_issued:'—', cancelled:'—'})[p.status];
+  return `
+  <div class="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-4 gap-4 mb-6">
+    ${card('طلبات شراء مفتوحة', fmtNum(open.length), 'من الطلب حتى إصدار أمر الشراء','brand')}
+    ${card('بانتظار عروض الأسعار', fmtNum(PRS.filter(p=>p.status==='rfq_sent').length), `الحد الأدنى ${fmtNum(PROC.minQuotes)} عروض لكل طلب`,'amber')}
+    ${card('قيد التقييم / الاعتماد', fmtNum(PRS.filter(p=>['tech_eval','comm_eval','po_approval'].includes(p.status)).length), 'فني · تجاري · سلسلة اعتماد','brand')}
+    ${card('أوامر شراء صادرة', fmtMoney(PRS.filter(p=>p.po).reduce((a,p)=>a+prValue(p)*1.15,0)), `${fmtNum(PRS.filter(p=>p.po).length)} أمر شراء هذا العام`,'brand')}
+  </div>
+  <div class="bg-white rounded-2xl border border-slate-200 p-4 mb-4 flex items-center gap-2 flex-wrap text-xs">
+    <span class="font-bold text-slate-600">مراحل الدورة:</span>
+    ${PR_STAGES.map((x,i)=>`<span class="flex items-center gap-1.5"><span class="w-5 h-5 rounded-full bg-brand-800 text-white flex items-center justify-center text-[10px] font-extrabold">${i+1}</span>${x[1]}</span>${i<PR_STAGES.length-1?'<span class="text-slate-300">←</span>':''}`).join('')}
+  </div>
+  ${section(`طلبات الشراء (${fmtNum(PRS.length)})`, `<div class="tbl-wrap"><table class="tbl w-full text-sm">
+    <thead><tr><th>رقم الطلب</th><th>الموضوع</th><th>المشروع</th><th>مقدم الطلب</th><th>التاريخ</th><th>القيمة</th><th>العروض</th><th>المرحلة</th><th>الحالة</th><th>الخطوة التالية</th></tr></thead>
+    <tbody>${PRS.map(p=>`<tr class="cursor-pointer" onclick="openPR('${p.id}')">
+      <td class="font-bold text-brand-800 whitespace-nowrap">${p.id}</td>
+      <td class="max-w-xs">${p.title}</td>
+      <td class="text-slate-500">${projOf(p.proj).name}</td>
+      <td>${p.by}</td>
+      <td class="text-slate-500 whitespace-nowrap">${dt(p.date)}</td>
+      <td class="font-semibold whitespace-nowrap">${fmtMoney(prValue(p))}${p.award?'':'<span class="text-[10px] text-slate-400 block">تقديرية</span>'}</td>
+      <td>${p.rfq?`<span class="font-extrabold ${p.quotes.length>=PROC.minQuotes?'text-emerald-600':'text-amber-600'}">${fmtNum(p.quotes.length)}</span><span class="text-slate-400"> / ${fmtNum(PROC.minQuotes)}</span>`:'—'}</td>
+      <td>${prStepper(p.status)}</td>
+      <td>${prBadge(p.status)}</td>
+      <td class="text-xs text-slate-600">${nextStep(p)}</td>
+    </tr>`).join('')}</tbody></table></div>`, primaryBtn('procurement',BTN_SM))}`;
+};
+
+/* ── PR detail ── */
+let PRTAB='req';
+function openPR(id, tab){
+  const pr=findPR(id); PRTAB = tab||PRTAB||'req';
+  const tabs=[['req','الطلب'],['quotes',`عروض الأسعار (${fmtNum(pr.quotes.length)})`],['tech','التقييم الفني'],['comm','التقييم التجاري'],['po','الاعتماد وأمر الشراء'],['log','السجل']];
+  const next = {draft:['quotes','إرسال للاعتماد',`submitPR('${id}')`], pr_approval:['req','اعتماد الطلب',`approvePR('${id}')`], approved:['quotes','إرسال طلب عروض الأسعار ←',`openPR('${id}','quotes')`],
+    rfq_sent:['quotes', pr.quotes.length>=PROC.minQuotes?'بدء التقييم الفني':'إضافة عرض سعر ←', pr.quotes.length>=PROC.minQuotes?`startTech('${id}')`:`openPR('${id}','quotes')`],
+    tech_eval:['tech','إكمال التقييم الفني ←',`openPR('${id}','tech')`], comm_eval:['comm','الترسية ورفعها للاعتماد ←',`openPR('${id}','comm')`],
+    po_approval:['po','اعتماد أمر الشراء ←',`openPR('${id}','po')`], po_issued:['po','عرض مستند أمر الشراء',`openPO('${id}')`], cancelled:null}[pr.status];
+  const canAct = ['admin','reviewer'].includes(ME.role);
+  showModal(mHead(`${pr.id} — ${pr.title}`, `${projOf(pr.proj).name} · ${pr.dept} · مقدم الطلب ${pr.by} · ${dtBoth(pr.date)}`) + `
+  <div class="tabs px-6 pt-3 border-b border-slate-200 flex gap-1 shrink-0">
+    ${tabs.map(([t,l])=>`<button onclick="openPR('${id}','${t}')" class="tab px-4 py-2.5 text-sm border-b-2 ${PRTAB===t?'active':'border-transparent text-slate-500 hover:text-slate-700'}">${l}</button>`).join('')}
+  </div>
+  <div class="mbody flex-1 overflow-y-auto p-6">${prTab(pr)}</div>
+  <div class="mfoot px-6 py-4 border-t border-slate-200 shrink-0">
+    <div id="cancel-box" hidden class="mb-3 flex flex-wrap items-center gap-2">
+      <input type="text" placeholder="سبب إلغاء الطلب — إلزامي ويُحفظ في سجل التدقيق" class="border border-red-300 rounded-lg px-3 py-2 text-sm flex-1 min-w-[200px]">
+      <button onclick="cancelPR('${id}')" class="px-4 py-2 rounded-lg bg-red-600 text-white font-bold text-sm">تأكيد الإلغاء</button><span class="err text-[11px] text-red-600 font-bold"></span></div>
+    <div class="flex items-center justify-between flex-wrap gap-2">
+      <div class="flex items-center gap-2">${prBadge(pr.status)}${prStepper(pr.status)}</div>
+      <div class="flex gap-2 flex-wrap">
+        <button onclick="closeModal()" class="px-4 py-2.5 rounded-xl border border-slate-300 font-bold text-sm">إغلاق</button>
+        ${canAct && !['po_issued','cancelled'].includes(pr.status) ? `<button onclick="document.getElementById('cancel-box').hidden^=1" class="px-4 py-2.5 rounded-xl border border-slate-300 font-bold text-sm">إلغاء الطلب</button>`:''}
+        ${next && (canAct || pr.status==='po_issued') ? `<button onclick="${next[2]}" class="px-5 py-2.5 rounded-xl bg-brand-800 text-white font-bold text-sm">${next[1]}</button>`:''}
+      </div>
+    </div>
+  </div>`, 'w-full max-w-6xl h-[94vh]');
+}
+function prTab(pr){
+  const id=pr.id, st=pr.status, canAct=['admin','reviewer'].includes(ME.role), isAdmin=ME.role==='admin';
+  const note = t => `<div class="text-center py-14 text-slate-400 text-sm">${t}</div>`;
+  if(PRTAB==='req') return `
+    <div class="grid grid-cols-1 lg:grid-cols-3 gap-4 mb-5">
+      <div class="lg:col-span-2 border border-slate-200 rounded-2xl p-4 text-sm space-y-2">
+        ${[['المشروع',projOf(pr.proj).name],['الإدارة الطالبة',pr.dept],['مقدم الطلب',pr.by],['تاريخ الطلب',dtBoth(pr.date)],['تاريخ الحاجة',dtBoth(pr.need)],['القيمة التقديرية',fmtMoney(prEst(pr))]].map(([k,v])=>`<div class="flex justify-between gap-3 border-b border-slate-100 pb-1.5"><span class="text-slate-500">${k}</span><span class="font-semibold text-left">${v}</span></div>`).join('')}
+        <div class="pt-1"><div class="text-slate-500 text-xs mb-1">المبرر</div><div class="leading-relaxed">${pr.just}</div></div>
+      </div>
+      <div class="bg-slate-50 rounded-2xl p-4 text-sm">
+        <div class="font-extrabold text-brand-800 mb-2">قواعد الدورة</div>
+        <ul class="space-y-1.5 text-xs text-slate-600 list-disc pr-4">
+          <li>لا يبدأ التقييم قبل استلام <b>${fmtNum(PROC.minQuotes)} عروض</b> على الأقل.</li>
+          <li>يُستبعد من التقييم التجاري كل عرض يقل تقييمه الفني عن <b>${fmtPct(PROC.techPass)}</b>.</li>
+          <li>الدرجة المجمّعة = ${fmtPct(PROC.wTech)} فني + ${fmtPct(PROC.wComm)} تجاري.</li>
+          <li>سلسلة اعتماد أمر الشراء تُبنى تلقائياً حسب القيمة شاملة الضريبة.</li>
+          <li>الترسية على غير الأعلى درجة تتطلب مبرراً مكتوباً يُحفظ في سجل التدقيق.</li>
+        </ul>
+      </div>
+    </div>
+    <div class="tbl-wrap"><table class="tbl w-full text-sm"><thead><tr><th>#</th><th>البند</th><th>المواصفات</th><th>الوحدة</th><th>الكمية</th><th>سعر تقديري</th><th>الإجمالي التقديري</th></tr></thead>
+      <tbody>${pr.lines.map((l,ix)=>`<tr><td class="text-slate-400">${fmtNum(ix+1)}</td><td class="font-semibold">${l.item}</td><td class="text-xs text-slate-500">${l.spec}</td><td>${l.unit}</td><td>${fmtNum(l.qty)}</td><td>${fmtNum(l.est)}</td><td class="font-semibold whitespace-nowrap">${fmtMoney(l.qty*l.est)}</td></tr>`).join('')}</tbody>
+      <tfoot><tr class="bg-slate-50 font-extrabold"><td colspan="6">الإجمالي التقديري (قبل الضريبة)</td><td>${fmtMoney(prEst(pr))}</td></tr></tfoot></table></div>
+    ${st==='pr_approval' && isAdmin ? `<div class="mt-4 flex gap-2 flex-wrap"><button onclick="approvePR('${id}')" class="px-5 py-2.5 rounded-xl bg-brand-800 text-white font-bold text-sm">اعتماد الطلب</button><button onclick="returnPR('${id}')" class="px-4 py-2.5 rounded-xl border border-slate-300 font-bold text-sm">إعادة للتعديل</button></div>`:''}
+    ${st==='pr_approval' && !isAdmin ? '<div class="mt-4 text-xs text-amber-700 font-bold">بانتظار اعتماد مدير المشتريات</div>':''}`;
+
+  if(PRTAB==='quotes'){
+    if(['draft','pr_approval'].includes(st)) return note('تُرسل طلبات عروض الأسعار بعد اعتماد طلب الشراء.');
+    if(st==='approved') return `<div class="max-w-2xl" id="rfq-form">
+      <h4 class="font-extrabold text-brand-800 mb-1">إرسال طلب عروض الأسعار (RFQ)</h4>
+      <p class="text-xs text-slate-500 mb-4">اختر ${fmtNum(PROC.minQuotes)} موردين على الأقل من السجل المعتمد. يُرسل الطلب بالبريد مع بنود الطلب ومواصفاته وتاريخ الإغلاق.</p>
+      <div class="space-y-2 mb-4">${VENDORS.map(v=>`<label class="flex items-center gap-3 border border-slate-200 rounded-xl px-4 py-2.5 text-sm hover:bg-slate-50"><input type="checkbox" value="${v.id}" class="w-4 h-4"><span class="flex-1"><b>${v.name}</b><span class="text-xs text-slate-400"> · ${v.cat} · ${v.city}</span></span><span class="text-[11px] text-slate-400" dir="ltr">${v.vat}</span></label>`).join('')}</div>
+      <label class="block mb-4"><span class="text-xs font-bold text-slate-600 mb-1 block">تاريخ إغلاق استلام العروض</span><input type="date" name="close" class="${INP}" dir="ltr" style="max-width:14rem"></label>
+      <div class="err text-xs text-red-600 font-bold mb-2"></div>
+      ${canAct?`<button onclick="sendRfq('${id}')" class="px-5 py-2.5 rounded-xl bg-brand-800 text-white font-bold text-sm">إرسال طلب عروض الأسعار</button>`:''}
+    </div>`;
+    const pending = pr.rfq.vendors.filter(v=>!pr.quotes.some(q=>q.vendor===v));
+    const enough = pr.quotes.length>=PROC.minQuotes;
+    return `
+    <div class="flex items-center justify-between flex-wrap gap-3 mb-4">
+      <div class="text-sm"><b>طلب العروض أُرسل</b> ${dtBoth(pr.rfq.sent)} إلى ${fmtNum(pr.rfq.vendors.length)} موردين</div>
+      <span class="text-xs font-bold px-3 py-1.5 rounded-full ${enough?'bg-emerald-100 text-emerald-700':'bg-amber-100 text-amber-800'}">${enough?'✓ اكتمل الحد الأدنى':'⏳'} مستلم ${fmtNum(pr.quotes.length)} من ${fmtNum(PROC.minQuotes)} عروض</span>
+    </div>
+    <div class="tbl-wrap mb-5"><table class="tbl w-full text-sm"><thead><tr><th>المورد</th><th>تاريخ العرض</th><th>صالح حتى</th><th>مدة التوريد</th><th>شروط الدفع</th><th>الإجمالي قبل الضريبة</th><th>الضريبة ١٥٪</th><th>الإجمالي</th><th>المرفق</th></tr></thead>
+      <tbody>${pr.quotes.map(q=>{const t=qTotal(pr,q);return `<tr><td class="font-semibold">${vendorOf(q.vendor).name}</td><td class="whitespace-nowrap text-slate-500">${dt(q.date)}</td><td class="whitespace-nowrap text-slate-500">${dt(q.valid)}</td><td>${fmtNum(q.days)} يوماً</td><td class="text-xs">${q.terms}</td><td class="font-semibold whitespace-nowrap">${fmtMoney(t)}</td><td class="whitespace-nowrap">${fmtMoney(t*0.15)}</td><td class="font-extrabold whitespace-nowrap">${fmtMoney(t*1.15)}</td><td class="text-xs text-brand-700">📎 PDF</td></tr>`}).join('')}
+      ${pending.map(v=>`<tr class="text-slate-400"><td>${vendorOf(v).name}</td><td colspan="8" class="text-xs">لم يصل عرض بعد</td></tr>`).join('')}</tbody></table></div>
+    ${st==='rfq_sent' && canAct && pending.length ? `<div class="border border-slate-200 rounded-2xl p-4" id="quote-form">
+      <h4 class="font-extrabold text-brand-800 mb-3">تسجيل عرض سعر مستلم</h4>
+      <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3 mb-3">
+        ${F('المورد',`<select name="vendor" class="${INP}">${pending.map(v=>`<option value="${v}">${vendorOf(v).name}</option>`).join('')}</select>`)}
+        ${F('تاريخ العرض',`<input type="date" name="date" value="${new Date().toISOString().slice(0,10)}" class="${INP}" dir="ltr">`)}
+        ${F('صالح حتى',`<input type="date" name="valid" class="${INP}" dir="ltr">`)}
+        ${F('مدة التوريد (يوم)',`<input type="number" name="days" min="1" class="${INP}" dir="ltr">`)}
+        ${F('شروط الدفع',`<input name="terms" placeholder="مثال: ٣٠ يوماً من الاستلام" class="${INP}">`,false)}
+      </div>
+      <div class="text-xs font-bold text-slate-600 mb-1">أسعار الوحدة حسب بنود الطلب <span class="text-red-500">*</span></div>
+      <div class="tbl-wrap mb-3"><table class="tbl w-full text-sm"><thead><tr><th>البند</th><th>الكمية</th><th>سعر الوحدة (ر.س)</th><th>الإجمالي</th></tr></thead>
+        <tbody>${pr.lines.map((l,ix)=>`<tr><td>${l.item}</td><td>${fmtNum(l.qty)} ${l.unit}</td><td><input type="number" min="0" step="0.01" data-px="${ix}" oninput="quoteLive(this,${l.qty})" class="${INP}" dir="ltr" style="max-width:9rem"></td><td class="qv font-semibold whitespace-nowrap">—</td></tr>`).join('')}</tbody></table></div>
+      <div class="err text-xs text-red-600 font-bold mb-2"></div>
+      <button onclick="addQuote('${id}')" class="px-5 py-2.5 rounded-xl bg-brand-800 text-white font-bold text-sm">حفظ العرض</button>
+    </div>`:''}
+    ${st==='rfq_sent' && enough && canAct ? `<div class="mt-4 flex items-center gap-3 flex-wrap"><button onclick="startTech('${id}')" class="px-5 py-2.5 rounded-xl bg-brand-800 text-white font-bold text-sm">بدء التقييم الفني ←</button><span class="text-xs text-slate-500">تُقفل العروض عند بدء التقييم ولا تُقبل عروض إضافية.</span></div>`:''}
+    ${st==='rfq_sent' && !enough ? `<div class="mt-4 text-xs text-amber-700 font-bold">⛔ لا يمكن بدء التقييم — يلزم ${fmtNum(PROC.minQuotes-pr.quotes.length)} عرض إضافي على الأقل.</div>`:''}`;
+  }
+
+  if(PRTAB==='tech'){
+    if(stageIdx(st)<2) return note(`يبدأ التقييم الفني بعد استلام ${fmtNum(PROC.minQuotes)} عروض على الأقل.`);
+    const editable = st==='tech_eval' && canAct;
+    return `<p class="text-xs text-slate-500 mb-3">درجة كل معيار من ٠ إلى ١٠ · الوزن النسبي بجانب المعيار · حد الاجتياز <b>${fmtPct(PROC.techPass)}</b> — من يقل عنه يُستبعد من التقييم التجاري.</p>
+    <div class="tbl-wrap mb-4" id="tech-matrix"><table class="tbl w-full text-sm"><thead><tr><th>المعيار</th><th>الوزن</th>${pr.quotes.map(q=>`<th>${vendorOf(q.vendor).name}</th>`).join('')}</tr></thead>
+      <tbody>${TECH.map(c=>`<tr><td class="font-semibold">${c.ar}</td><td class="text-slate-500">${fmtPct(c.w)}</td>${pr.quotes.map((q,qi)=>`<td>${editable?`<input type="number" min="0" max="10" step="0.5" value="${q.tech?q.tech[c.k]:''}" data-q="${qi}" data-c="${c.k}" oninput="techLive()" class="${INP}" dir="ltr" style="max-width:5rem">`:`<b>${q.tech?fmtNum(q.tech[c.k]):'—'}</b>`}</td>`).join('')}</tr>`).join('')}</tbody>
+      <tfoot><tr class="bg-slate-50 font-extrabold"><td colspan="2">الدرجة الفنية الموزونة</td>${pr.quotes.map((q,qi)=>{const p=techPct(q);return `<td class="tech-total" data-q="${qi}">${p===null?'—':`<span class="${p>=PROC.techPass?'text-emerald-700':'text-red-600'}">${fmtPct(p)} ${p>=PROC.techPass?'✓ مؤهل':'✕ مستبعد'}</span>`}</td>`}).join('')}</tr></tfoot></table></div>
+    ${editable?`<div class="err text-xs text-red-600 font-bold mb-2"></div><div class="flex items-center gap-3 flex-wrap"><button onclick="saveTech('${id}')" class="px-5 py-2.5 rounded-xl bg-brand-800 text-white font-bold text-sm">اعتماد التقييم الفني ←</button><span class="text-xs text-slate-500">يُسجَّل اسم المقيِّم ووقت الاعتماد، ولا تُعدَّل الدرجات بعده.</span></div>`
+      : `<div class="text-xs text-slate-500">${pr.techBy?`اعتُمد بواسطة ${pr.techBy.by} · <span dir="ltr">${pr.techBy.at}</span>`:'اعتُمد التقييم الفني.'}</div>`}`;
+  }
+
+  if(PRTAB==='comm'){
+    if(stageIdx(st)<3) return note('يبدأ التقييم التجاري بعد اعتماد التقييم الفني.');
+    const rows=commRows(pr), excluded=pr.quotes.filter(q=>!qualified(pr).includes(q)), editable=st==='comm_eval'&&canAct;
+    const best = rows[0];
+    return `<p class="text-xs text-slate-500 mb-3">الدرجة التجارية = أقل سعر مؤهل ÷ سعر العرض × ١٠٠ · الدرجة المجمّعة = ${fmtPct(PROC.wTech)} فني + ${fmtPct(PROC.wComm)} تجاري · الترسية الموصى بها: الأعلى درجة مجمّعة.</p>
+    <div class="tbl-wrap mb-4" id="comm-table"><table class="tbl w-full text-sm"><thead><tr><th>الترتيب</th><th>المورد</th><th>الإجمالي قبل الضريبة</th><th>شامل الضريبة</th><th>التوريد</th><th>شروط الدفع</th><th>فني</th><th>تجاري</th><th>مجمّعة</th>${editable?'<th>الترسية</th>':''}</tr></thead>
+      <tbody>${rows.map((r,ix)=>`<tr class="${pr.award&&pr.award.vendor===r.q.vendor?'bg-emerald-50':''}">
+        <td class="font-extrabold ${ix===0?'text-emerald-700':''}">${fmtNum(ix+1)}${ix===0?' ★':''}</td><td class="font-semibold">${vendorOf(r.q.vendor).name}${r.lowest?' <span class="text-[10px] bg-brand-100 text-brand-800 rounded px-1.5 py-0.5">أقل سعر</span>':''}</td>
+        <td class="whitespace-nowrap">${fmtMoney(r.total)}</td><td class="font-semibold whitespace-nowrap">${fmtMoney(r.total*1.15)}</td><td>${fmtNum(r.q.days)} يوماً</td><td class="text-xs">${r.q.terms}</td>
+        <td>${fmtPct(r.tech)}</td><td>${fmtPct(r.comm)}</td><td class="font-extrabold text-brand-800">${fmtPct(r.score)}</td>
+        ${editable?`<td><input type="radio" name="award" value="${r.q.vendor}" ${ix===0?'checked':''} onchange="awardLive('${id}')"></td>`:''}</tr>`).join('')}</tbody></table></div>
+    ${excluded.length?`<div class="text-xs text-slate-500 mb-4">مستبعد من التقييم التجاري: ${excluded.map(q=>`<b>${vendorOf(q.vendor).name}</b> (فني ${fmtPct(techPct(q))} أقل من ${fmtPct(PROC.techPass)}) — سعره ${fmtMoney(qTotal(pr,q))}`).join(' · ')}</div>`:''}
+    ${editable?`<div id="award-reason" ${best?'hidden':''} class="mb-3"><label class="block"><span class="text-xs font-bold text-red-600 mb-1 block">مبرر الترسية على غير الأعلى درجة — إلزامي</span><textarea name="reason" rows="2" class="${INP}"></textarea></label></div>
+      <div class="err text-xs text-red-600 font-bold mb-2"></div>
+      <div class="flex items-center gap-3 flex-wrap"><button onclick="submitAward('${id}')" class="px-5 py-2.5 rounded-xl bg-brand-800 text-white font-bold text-sm">الترسية ورفعها للاعتماد ←</button><span class="text-xs text-slate-500">تُبنى سلسلة الاعتماد تلقائياً حسب القيمة شاملة الضريبة.</span></div>`
+      : pr.award?`<div class="border border-emerald-200 bg-emerald-50 rounded-2xl p-4 text-sm"><div class="font-extrabold text-emerald-800 mb-1">✓ الترسية: ${vendorOf(pr.award.vendor).name} — ${fmtMoney(prValue(pr)*1.15)} شامل الضريبة</div><div class="text-slate-700">${pr.award.reason}</div><div class="text-xs text-slate-500 mt-1">${pr.award.by} · <span dir="ltr">${pr.award.at}</span></div></div>`:''}`;
+  }
+
+  if(PRTAB==='po'){
+    if(stageIdx(st)<4) return note('يُنشأ مسار الاعتماد بعد الترسية في التقييم التجاري.');
+    const grand=prValue(pr)*1.15, pendingIx=pr.approvals.findIndex(a=>!a.by), allOk=pendingIx===-1;
+    return `<div class="grid grid-cols-1 lg:grid-cols-2 gap-4 mb-5">
+      <div class="border border-slate-200 rounded-2xl p-4 text-sm space-y-2">
+        <h4 class="font-extrabold text-brand-800 mb-1">ملخص الترسية</h4>
+        ${[['المورد',vendorOf(pr.award.vendor).name],['الإجمالي قبل الضريبة',fmtMoney(prValue(pr))],['ضريبة القيمة المضافة ١٥٪',fmtMoney(prValue(pr)*0.15)],['الإجمالي شامل الضريبة',fmtMoney(grand)],['مدة التوريد',`${fmtNum(pr.quotes.find(q=>q.vendor===pr.award.vendor).days)} يوماً`],['شروط الدفع',pr.quotes.find(q=>q.vendor===pr.award.vendor).terms]].map(([k,v])=>`<div class="flex justify-between gap-3 border-b border-slate-100 pb-1.5"><span class="text-slate-500">${k}</span><span class="font-semibold text-left">${v}</span></div>`).join('')}
+      </div>
+      <div class="border border-slate-200 rounded-2xl p-4 text-sm">
+        <h4 class="font-extrabold text-brand-800 mb-1">سلسلة الاعتماد <span class="text-xs text-slate-400 font-normal">— ${fmtNum(pr.approvals.length)} مستويات لقيمة ${fmtMoney(grand)}</span></h4>
+        <div class="space-y-2 mt-3">${pr.approvals.map((a,ix)=>`<div class="flex items-center gap-3 border rounded-xl px-3 py-2.5 ${a.by?'border-emerald-200 bg-emerald-50':ix===pendingIx?'border-amber-300 bg-amber-50':'border-slate-200'}">
+          <div class="w-7 h-7 rounded-full flex items-center justify-center text-xs font-extrabold ${a.by?'bg-emerald-600 text-white':'bg-slate-200 text-slate-600'}">${a.by?'✓':fmtNum(ix+1)}</div>
+          <div class="flex-1"><div class="font-bold">${a.role}</div><div class="text-xs text-slate-500">${a.by?`${a.by} · <span dir="ltr">${a.at}</span>`:ix===pendingIx?'بانتظار الاعتماد':'—'}</div></div>
+          ${!a.by && ix===pendingIx && st==='po_approval' && isAdmin ? `<button onclick="approveStep('${id}',${ix})" class="text-xs font-bold bg-brand-800 text-white rounded-lg px-3 py-1.5">اعتماد</button><button onclick="returnAward('${id}')" class="text-xs font-bold border border-slate-300 rounded-lg px-3 py-1.5">إعادة</button>`:''}
+        </div>`).join('')}</div>
+      </div>
+    </div>
+    ${pr.po ? `<div class="border border-emerald-200 bg-emerald-50 rounded-2xl p-4 flex items-center justify-between flex-wrap gap-3">
+        <div><div class="font-extrabold text-emerald-800 text-lg">أمر الشراء ${pr.po.id}</div><div class="text-sm text-slate-700">صدر ${dtBoth(pr.po.date)} · التسليم المتوقع ${dt(pr.po.delivery)} · ${pr.po.by}</div>
+        <div class="text-xs text-slate-500 mt-1">فواتير المورد الواردة على هذا الأمر تُطابق ببنوده وبإذن الاستلام (مطابقة ثلاثية) قبل الصرف.</div></div>
+        <button onclick="openPO('${id}')" class="px-5 py-2.5 rounded-xl bg-brand-800 text-white font-bold text-sm">عرض مستند أمر الشراء</button></div>`
+      : allOk && st==='po_approval' && canAct ? `<div class="flex items-center gap-3 flex-wrap"><button onclick="issuePO('${id}')" class="px-5 py-2.5 rounded-xl bg-brand-800 text-white font-bold text-sm">إصدار أمر الشراء</button><span class="text-xs text-slate-500">يُولَّد الرقم تلقائياً ويُرسل للمورد ويُقفل الطلب.</span></div>`
+      : `<div class="text-xs text-amber-700 font-bold">⏳ بانتظار ${pr.approvals[pendingIx]?.role||''} — لا يصدر أمر الشراء قبل اكتمال السلسلة.</div>`}`;
+  }
+
+  /* log */
+  const ev = pr.events||[];
+  return `<div class="max-w-2xl relative pr-8"><div class="absolute right-[11px] top-2 bottom-2 w-0.5 bg-slate-200"></div>
+    ${ev.map((e,ix)=>`<div class="relative mb-6"><div class="absolute -right-8 top-1 w-6 h-6 rounded-full ${ix===ev.length-1?'bg-brand-800':'bg-white border-2 border-brand-300'} flex items-center justify-center">${ix===ev.length-1?'<div class="w-2 h-2 bg-white rounded-full"></div>':''}</div>
+      <div class="font-extrabold text-brand-800">${e[0]}</div><div class="text-xs text-slate-400 mb-1">${e[1]} · <span dir="ltr">${e[2]}</span></div><div class="text-sm text-slate-600">${e[3]}</div></div>`).join('')}</div>`;
+}
+
+/* ── live helpers ── */
+function quoteLive(el, qty){ el.closest('tr').querySelector('.qv').textContent = fmtMoney((+el.value||0)*qty); }
+function techLive(){
+  const m=document.getElementById('tech-matrix'); if(!m) return;
+  m.querySelectorAll('.tech-total').forEach(td=>{
+    const qi=td.dataset.q, vals=[...m.querySelectorAll(`input[data-q="${qi}"]`)];
+    if(vals.some(i=>i.value==='')){ td.textContent='—'; return; }
+    const p=TECH.reduce((a,c)=>a+(+vals.find(i=>i.dataset.c===c.k).value)*c.w/10,0);
+    td.innerHTML=`<span class="${p>=PROC.techPass?'text-emerald-700':'text-red-600'}">${fmtPct(p)} ${p>=PROC.techPass?'✓ مؤهل':'✕ مستبعد'}</span>`;
+  });
+}
+function awardLive(id){ const pr=findPR(id), best=commRows(pr)[0], sel=document.querySelector('input[name=award]:checked'); document.getElementById('award-reason').hidden = !!best && sel.value===best.q.vendor; }
+
+/* ── actions ── */
+function submitPR(id){ const pr=findPR(id); pr.status='pr_approval'; prEvent(pr,'إرسال للاعتماد'); toast('أُرسل الطلب لاعتماد مدير المشتريات'); openPR(id,'req'); }
+function approvePR(id){ const pr=findPR(id); pr.status='approved'; prEvent(pr,'اعتماد الطلب'); toast('اعتُمد الطلب — الخطوة التالية إرسال طلب عروض الأسعار'); openPR(id,'quotes'); }
+function returnPR(id){ const pr=findPR(id); pr.status='draft'; prEvent(pr,'إعادة الطلب للتعديل'); toast('أُعيد الطلب إلى مقدمه'); openPR(id,'req'); }
+function sendRfq(id){
+  const pr=findPR(id), f=document.getElementById('rfq-form'), vs=[...f.querySelectorAll('input[type=checkbox]:checked')].map(i=>i.value), close=f.querySelector('[name=close]').value;
+  if(vs.length<PROC.minQuotes) return f.querySelector('.err').textContent=`اختر ${fmtNum(PROC.minQuotes)} موردين على الأقل (المحدد ${fmtNum(vs.length)}).`;
+  if(!close) return f.querySelector('.err').textContent='حدد تاريخ إغلاق استلام العروض.';
+  pr.rfq={sent:new Date().toISOString().slice(0,10), vendors:vs, close}; pr.status='rfq_sent';
+  prEvent(pr,'إرسال طلب عروض الأسعار',`${fmtNum(vs.length)} موردين · الإغلاق ${close}`); toast(`أُرسل طلب العروض إلى ${fmtNum(vs.length)} موردين`); openPR(id,'quotes');
+}
+function addQuote(id){
+  const pr=findPR(id), f=document.getElementById('quote-form'), g=n=>f.querySelector(`[name=${n}]`).value.trim();
+  const prices=[...f.querySelectorAll('[data-px]')].map(i=>i.value===''?null:+i.value);
+  if(!g('date')||!g('valid')||!g('days')) return f.querySelector('.err').textContent='تاريخ العرض وصلاحيته ومدة التوريد إلزامية.';
+  if(prices.some(p=>p===null||p<0)) return f.querySelector('.err').textContent='أدخل سعر الوحدة لكل بند.';
+  const q={vendor:g('vendor'), date:g('date'), valid:g('valid'), days:+g('days'), terms:g('terms')||'—', prices, tech:null};
+  pr.quotes.push(q); prEvent(pr,'تسجيل عرض سعر',`${vendorOf(q.vendor).name} — ${fmtMoney(qTotal(pr,q))}`);
+  if(pr.quotes.length===PROC.minQuotes) prEvent(pr,`استلام ${fmtNum(PROC.minQuotes)} عروض`,'اكتمل الحد الأدنى — يمكن بدء التقييم الفني');
+  toast('سُجِّل العرض'); openPR(id,'quotes');
+}
+function startTech(id){ const pr=findPR(id); if(pr.quotes.length<PROC.minQuotes) return; pr.status='tech_eval'; prEvent(pr,'بدء التقييم الفني',`${fmtNum(pr.quotes.length)} عروض`); toast('أُقفلت العروض وبدأ التقييم الفني'); openPR(id,'tech'); }
+function saveTech(id){
+  const pr=findPR(id), m=document.getElementById('tech-matrix'), inputs=[...m.querySelectorAll('input')];
+  if(inputs.some(i=>i.value===''||+i.value<0||+i.value>10)) return m.parentElement.querySelector('.err').textContent='أدخل درجة من ٠ إلى ١٠ لكل معيار ولكل مورد.';
+  inputs.forEach(i=>{ const q=pr.quotes[+i.dataset.q]; q.tech=q.tech||{}; q.tech[i.dataset.c]=+i.value; });
+  pr.techBy={by:ME.name, at:nowStr()}; pr.status='comm_eval';
+  const ok=qualified(pr).length;
+  prEvent(pr,'اعتماد التقييم الفني',`${fmtNum(ok)} مؤهل من ${fmtNum(pr.quotes.length)}`);
+  if(!ok){ toast('لم يجتز أي عرض الحد الفني — يلزم إعادة طرح طلب العروض'); } else toast('اعتُمد التقييم الفني — ننتقل للتقييم التجاري');
+  openPR(id,'comm');
+}
+function submitAward(id){
+  const pr=findPR(id), rows=commRows(pr), box=document.getElementById('comm-table').parentElement;
+  if(!rows.length) return box.querySelector('.err').textContent='لا توجد عروض مؤهلة فنياً.';
+  const v=document.querySelector('input[name=award]:checked').value, best=rows[0], reason=(document.querySelector('[name=reason]')||{value:''}).value.trim();
+  if(v!==best.q.vendor && !reason) return box.querySelector('.err').textContent='الترسية على غير الأعلى درجة تتطلب مبرراً مكتوباً.';
+  pr.award={vendor:v, reason: v===best.q.vendor?'أعلى درجة مجمّعة بين العروض المؤهلة فنياً.':reason, by:ME.name, at:nowStr()};
+  pr.approvals=chainFor(prValue(pr)*1.15).map(role=>({role,by:null,at:null})); pr.status='po_approval';
+  prEvent(pr,'الترسية',`${vendorOf(v).name} — ${fmtMoney(prValue(pr)*1.15)} شامل الضريبة${v!==best.q.vendor?' — على غير الأعلى درجة: '+reason:''}`);
+  toast(`رُفعت الترسية لسلسلة اعتماد من ${fmtNum(pr.approvals.length)} مستويات`); openPR(id,'po');
+}
+function approveStep(id,ix){ const pr=findPR(id); pr.approvals[ix]={...pr.approvals[ix], by:ME.name, at:nowStr()}; prEvent(pr,`اعتماد — ${pr.approvals[ix].role}`); toast(pr.approvals.every(a=>a.by)?'اكتملت سلسلة الاعتماد — يمكن إصدار أمر الشراء':'سُجِّل الاعتماد'); openPR(id,'po'); }
+function returnAward(id){ const pr=findPR(id); pr.status='comm_eval'; pr.approvals=[]; prEvent(pr,'إعادة الترسية للتقييم التجاري'); toast('أُعيد الطلب إلى التقييم التجاري'); openPR(id,'comm'); }
+function issuePO(id){
+  const pr=findPR(id), n=PRS.filter(p=>p.po).length+1, q=pr.quotes.find(x=>x.vendor===pr.award.vendor), d=new Date(); d.setDate(d.getDate()+q.days);
+  pr.po={id:`PO-${d.getFullYear()}-${String(n+8).padStart(3,'0')}`, date:new Date().toISOString().slice(0,10), vendor:pr.award.vendor, delivery:d.toISOString().slice(0,10), by:ME.name};
+  pr.status='po_issued'; prEvent(pr,'إصدار أمر الشراء',pr.po.id); toast(`صدر أمر الشراء ${pr.po.id}`); openPO(id);
+}
+function cancelPR(id){
+  const pr=findPR(id), box=document.getElementById('cancel-box'), reason=box.querySelector('input').value.trim();
+  if(!reason) return box.querySelector('.err').textContent='سبب الإلغاء إلزامي';
+  pr.status='cancelled'; prEvent(pr,'إلغاء طلب الشراء',reason); toast('أُلغي الطلب وسُجِّل السبب'); closeModal(); go('procurement');
+}
+
+/* ── PO document ── */
+function openPO(id){
+  const pr=findPR(id), v=vendorOf(pr.po.vendor), q=pr.quotes.find(x=>x.vendor===pr.po.vendor), sub=qTotal(pr,q);
+  showModal(mHead(`أمر شراء ${pr.po.id}`, `${pr.id} — ${pr.title}`) + `
+  <div class="mbody flex-1 overflow-y-auto bg-slate-200 p-6"><div class="doc-page rounded-lg p-8 mx-auto max-w-3xl text-sm">
+    <div class="flex justify-between items-start border-b-2 border-slate-800 pb-4 mb-5">
+      <div><div class="font-extrabold text-lg">اتحاد العرين للمقاولات</div><div class="text-xs text-slate-500" dir="ltr">AL AREEN UNION CONTRACTING CO.</div><div class="text-xs text-slate-500 mt-1">الرقم الضريبي: 300012345600003 · س.ت: 1010012345</div></div>
+      <div class="text-left"><div class="font-extrabold text-xl">أمر شراء</div><div class="text-xs text-slate-500">PURCHASE ORDER</div><div class="font-bold mt-2" dir="ltr">${pr.po.id}</div><div class="text-xs text-slate-500">${dtBoth(pr.po.date)}</div></div>
+    </div>
+    <div class="grid grid-cols-2 gap-6 mb-5 text-xs">
+      <div><div class="font-bold text-slate-500 mb-1">المورد</div><div class="font-extrabold text-sm">${v.name}</div><div>${v.city} · س.ت ${v.cr}</div><div>الرقم الضريبي: ${v.vat}</div></div>
+      <div><div class="font-bold text-slate-500 mb-1">التسليم إلى</div><div class="font-extrabold text-sm">${projOf(pr.proj).name}</div><div>${projOf(pr.proj).city} — موقع المشروع</div><div>موعد التسليم: <b>${dt(pr.po.delivery)}</b> (${fmtNum(q.days)} يوماً) · شروط الدفع: <b>${q.terms}</b></div></div>
+    </div>
+    <table class="w-full text-xs border border-slate-300 mb-4"><thead><tr class="bg-slate-100"><th class="border border-slate-300 p-1.5">#</th><th class="border border-slate-300 p-1.5 text-right">البند والمواصفات</th><th class="border border-slate-300 p-1.5">الوحدة</th><th class="border border-slate-300 p-1.5">الكمية</th><th class="border border-slate-300 p-1.5">سعر الوحدة</th><th class="border border-slate-300 p-1.5">الإجمالي</th></tr></thead>
+      <tbody>${pr.lines.map((l,ix)=>`<tr><td class="border border-slate-300 p-1.5 text-center">${fmtNum(ix+1)}</td><td class="border border-slate-300 p-1.5"><b>${l.item}</b><div class="text-slate-500">${l.spec}</div></td><td class="border border-slate-300 p-1.5 text-center">${l.unit}</td><td class="border border-slate-300 p-1.5 text-center">${fmtNum(l.qty)}</td><td class="border border-slate-300 p-1.5 text-center">${fmtNum(q.prices[ix])}</td><td class="border border-slate-300 p-1.5 text-center">${fmtNum(l.qty*q.prices[ix])}</td></tr>`).join('')}</tbody></table>
+    <div class="flex justify-end mb-6"><table class="text-xs"><tr><td class="pl-8 py-0.5">الإجمالي قبل الضريبة</td><td class="font-bold">${fmtMoney(sub)}</td></tr><tr><td class="pl-8 py-0.5">ضريبة القيمة المضافة ١٥٪</td><td class="font-bold">${fmtMoney(sub*0.15)}</td></tr><tr class="border-t border-slate-400"><td class="pl-8 py-1 font-extrabold">الإجمالي</td><td class="font-extrabold">${fmtMoney(sub*1.15)}</td></tr></table></div>
+    <div class="grid grid-cols-3 gap-4 text-[11px] text-center border-t border-slate-300 pt-4">${pr.approvals.map(a=>`<div><div class="font-bold">${a.role}</div><div class="text-slate-600">${a.by}</div><div class="text-slate-400" dir="ltr">${a.at}</div><div class="text-emerald-700 font-bold mt-1">✓ معتمد إلكترونياً</div></div>`).join('')}</div>
+    <div class="text-[10px] text-slate-400 mt-5">مرجع طلب الشراء ${pr.id} · عرض السعر المؤرخ ${dt(q.date)} · يخضع أمر الشراء لشروط التوريد العامة للشركة · تُطابق الفواتير ببنود هذا الأمر وإذن الاستلام قبل الصرف.</div>
+  </div></div>
+  <div class="mfoot px-6 py-4 border-t border-slate-200 flex justify-between gap-2 flex-wrap shrink-0">
+    <button onclick="openPR('${id}','po')" class="px-4 py-2.5 rounded-xl border border-slate-300 font-bold text-sm">→ العودة إلى الطلب</button>
+    <div class="flex gap-2"><button onclick="window.print()" class="px-4 py-2.5 rounded-xl border border-slate-300 font-bold text-sm">طباعة / PDF</button><button onclick="toast('أُرسل أمر الشراء إلى ${v.name} بالبريد')" class="px-5 py-2.5 rounded-xl bg-brand-800 text-white font-bold text-sm">إرسال للمورد</button></div>
+  </div>`, 'w-full max-w-5xl h-[94vh]');
+}
+
+/* ── new PR ── */
+let NEWPR={lines:[]};
+const nextPRNo = () => { const y=new Date().getFullYear(), n=PRS.filter(p=>p.id.startsWith('PR-'+y)).length+27; return `PR-${y}-${String(n).padStart(3,'0')}`; };
+function openNewPR(){ NEWPR={lines:[{item:'',spec:'',unit:'',qty:'',est:''}]}; renderNewPR(); }
+function renderNewPR(){
+  showModal(mHead('طلب شراء جديد', `${nextPRNo()} · يُرفع لاعتماد مدير المشتريات ثم يُطرح لعروض الأسعار`) + `
+  <div id="prform" class="mbody flex-1 overflow-y-auto p-6 space-y-4">
+    <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
+      ${F('موضوع الطلب',`<input name="title" value="${NEWPR.title||''}" placeholder="مثال: توريد مواسير صرف صحي" class="${INP}">`)}
+      ${F('المشروع',`<select name="proj" class="${INP}">${PROJECTS.map(p=>`<option value="${p.id}" ${NEWPR.proj===p.id?'selected':''}>${p.id} — ${p.name}</option>`).join('')}</select>`)}
+      ${F('الإدارة الطالبة',`<input name="dept" value="${NEWPR.dept||''}" placeholder="الإنشاءات / الكهرباء / الميكانيكا…" class="${INP}">`)}
+      ${F('تاريخ الحاجة',`<input type="date" name="need" value="${NEWPR.need||''}" class="${INP}" dir="ltr">`)}
+      <div class="span2">${F('المبرر',`<textarea name="just" rows="2" class="${INP}">${NEWPR.just||''}</textarea>`)}</div>
+    </div>
+    <div class="flex items-center justify-between"><div class="text-xs font-bold text-slate-600">بنود الطلب <span class="text-red-500">*</span></div><button onclick="prAddRow()" class="text-xs font-bold text-brand-700 border border-brand-200 bg-brand-50 rounded-lg px-3 py-1.5">+ إضافة بند</button></div>
+    <div class="tbl-wrap"><table class="tbl w-full text-sm"><thead><tr><th>البند</th><th>المواصفات</th><th>الوحدة</th><th>الكمية</th><th>سعر تقديري</th><th>الإجمالي</th><th></th></tr></thead>
+      <tbody id="pr-rows">${NEWPR.lines.map((l,ix)=>`<tr>
+        <td><input value="${l.item}" data-k="item" placeholder="اسم البند" class="${INP}" style="min-width:12rem"></td>
+        <td><input value="${l.spec}" data-k="spec" placeholder="المواصفة / المعيار" class="${INP}" style="min-width:12rem"></td>
+        <td><input value="${l.unit}" data-k="unit" placeholder="عدد" class="${INP}" style="min-width:4rem"></td>
+        <td><input value="${l.qty}" data-k="qty" type="number" min="0" oninput="prLive(this)" class="${INP}" dir="ltr" style="min-width:5rem"></td>
+        <td><input value="${l.est}" data-k="est" type="number" min="0" step="0.01" oninput="prLive(this)" class="${INP}" dir="ltr" style="min-width:6rem"></td>
+        <td class="rowval font-semibold whitespace-nowrap">${fmtMoney((+l.qty||0)*(+l.est||0))}</td>
+        <td><button onclick="prDelRow(${ix})" class="text-red-600 font-extrabold px-2">×</button></td></tr>`).join('')}</tbody>
+      <tfoot><tr class="bg-slate-50 font-extrabold"><td colspan="5">الإجمالي التقديري</td><td colspan="2" id="pr-total">${fmtMoney(NEWPR.lines.reduce((a,l)=>a+(+l.qty||0)*(+l.est||0),0))}</td></tr></tfoot></table></div>
+    <div class="err text-xs text-red-600 font-bold"></div>
+    <div class="flex justify-between gap-2 flex-wrap">
+      <button onclick="closeModal()" class="px-4 py-2.5 rounded-xl border border-slate-300 font-bold text-sm">إلغاء</button>
+      <div class="flex gap-2"><button onclick="savePR(false)" class="px-4 py-2.5 rounded-xl border border-brand-300 text-brand-800 font-bold text-sm">حفظ كمسودة</button><button onclick="savePR(true)" class="px-5 py-2.5 rounded-xl bg-brand-800 text-white font-bold text-sm">إرسال للاعتماد ←</button></div></div>
+  </div>`, 'w-full max-w-5xl max-h-[94vh]');
+}
+function prCollect(){ const f=document.getElementById('prform'); ['title','proj','dept','need','just'].forEach(n=>NEWPR[n]=f.querySelector(`[name=${n}]`).value.trim()); NEWPR.lines=[...f.querySelectorAll('#pr-rows tr')].map(r=>{const o={}; r.querySelectorAll('[data-k]').forEach(e=>o[e.dataset.k]=e.value.trim()); return o;}); }
+function prLive(el){ const tr=el.closest('tr'); tr.querySelector('.rowval').textContent=fmtMoney((+tr.querySelector('[data-k=qty]').value||0)*(+tr.querySelector('[data-k=est]').value||0)); document.getElementById('pr-total').textContent=fmtMoney([...document.querySelectorAll('#pr-rows tr')].reduce((a,r)=>a+(+r.querySelector('[data-k=qty]').value||0)*(+r.querySelector('[data-k=est]').value||0),0)); }
+function prAddRow(){ prCollect(); NEWPR.lines.push({item:'',spec:'',unit:'',qty:'',est:''}); renderNewPR(); }
+function prDelRow(ix){ prCollect(); NEWPR.lines.splice(ix,1); if(!NEWPR.lines.length) NEWPR.lines.push({item:'',spec:'',unit:'',qty:'',est:''}); renderNewPR(); }
+function savePR(submit){
+  prCollect(); const f=document.getElementById('prform');
+  if(!NEWPR.title||!NEWPR.dept||!NEWPR.need||!NEWPR.just) return f.querySelector('.err').textContent='الموضوع والإدارة وتاريخ الحاجة والمبرر إلزامية.';
+  if(NEWPR.lines.some(l=>!l.item||!l.unit||!(+l.qty>0)||!(+l.est>=0))) return f.querySelector('.err').textContent='كل بند يحتاج اسماً ووحدة وكمية أكبر من صفر وسعراً تقديرياً.';
+  const pr={id:nextPRNo(), title:NEWPR.title, proj:NEWPR.proj, dept:NEWPR.dept, by:ME.name, date:new Date().toISOString().slice(0,10), need:NEWPR.need, just:NEWPR.just, status:submit?'pr_approval':'draft',
+    lines:NEWPR.lines.map(l=>({item:l.item, spec:l.spec, unit:l.unit, qty:+l.qty, est:+l.est})), quotes:[], events:[]};
+  PRS.push(pr); prEvent(pr, submit?'إنشاء طلب الشراء وإرساله للاعتماد':'إنشاء طلب الشراء (مسودة)', `قيمة تقديرية ${fmtMoney(prEst(pr))}`);
+  toast(submit?`أُرسل ${pr.id} للاعتماد`:`حُفظ ${pr.id} كمسودة`); closeModal(); go('procurement'); openPR(pr.id,'req');
 }
 
 /* ── BoQ Excel import wizard ────────────────────────────────────────────── */
