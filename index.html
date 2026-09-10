@@ -344,6 +344,8 @@ svg{display:block;vertical-align:middle}
   .tab.active{border-color:#0f3133;color:#0f3133;font-weight:700}
   input,select,textarea{font-family:inherit}
   [hidden]{display:none!important}
+  .span2{grid-column:1/-1}
+  input[type=number]{-moz-appearance:textfield}
   .tbl-wrap{overflow-x:auto;-webkit-overflow-scrolling:touch}
   #menu-btn,#scrim{display:none}
   #toast{position:fixed;bottom:1.25rem;left:50%;transform:translateX(-50%);z-index:70;background:#0f3133;color:#fff;font-size:.85rem;font-weight:700;padding:.65rem 1.1rem;border-radius:.75rem;box-shadow:0 10px 30px rgba(0,0,0,.25);opacity:0;pointer-events:none;transition:opacity .2s;max-width:calc(100vw - 2rem);text-align:center}
@@ -363,12 +365,14 @@ svg{display:block;vertical-align:middle}
     #view{padding:.75rem}
     #modal{padding:0}
     #modal-box{max-width:100%!important;width:100%;height:100vh!important;max-height:100vh!important;border-radius:0}
-    .tbl-wrap table{min-width:560px}
+    .tbl-wrap table{min-width:max-content}
+    .tbl-wrap th{white-space:nowrap}
     .tabs{overflow-x:auto;white-space:nowrap}
     .tabs button{flex-shrink:0}
     .mhead,.mfoot{padding:.75rem 1rem}
     .mbody{padding:1rem}
   }
+  @media (max-width:640px){.wiz span{display:none}.wiz .wiz-on span{display:inline}}
   @media (prefers-reduced-motion:reduce){.fade{animation:none}#sidebar,#toast{transition:none}}
 </style>
 </head>
@@ -401,7 +405,7 @@ svg{display:block;vertical-align:middle}
         <p class="text-slate-500 text-sm mt-1">اختر الدور لتجربة الصلاحيات المختلفة</p>
       </div>
       <label class="block text-sm font-semibold text-slate-600 mb-1">البريد الإلكتروني</label>
-      <input class="w-full border border-slate-300 rounded-xl px-4 py-2.5 mb-4 focus:ring-2 focus:ring-brand-500 outline-none" value="reviewer@alareen.sa">
+      <input class="w-full border border-slate-300 rounded-xl px-4 py-2.5 mb-4 focus:ring-2 focus:ring-brand-500 outline-none" id="login-email" value="admin@alareen.sa">
       <label class="block text-sm font-semibold text-slate-600 mb-1">كلمة المرور</label>
       <input type="password" class="w-full border border-slate-300 rounded-xl px-4 py-2.5 mb-5 focus:ring-2 focus:ring-brand-500 outline-none" value="••••••••">
       <label class="block text-sm font-semibold text-slate-600 mb-2">الدور (نموذج أولي)</label>
@@ -453,10 +457,7 @@ svg{display:block;vertical-align:middle}
         </div>
         <button onclick="toggleCal()" id="cal-btn" class="text-xs font-bold border border-slate-300 rounded-lg px-3 py-2 hover:bg-slate-50">ميلادي / هجري</button>
         <button onclick="toggleLang()" id="lang-btn" class="text-xs font-bold border border-slate-300 rounded-lg px-3 py-2 hover:bg-slate-50">EN</button>
-        <button onclick="openUpload()" class="bg-brand-800 hover:bg-brand-900 text-white text-sm font-bold rounded-xl px-4 py-2 flex items-center gap-1.5" data-role="admin,reviewer">
-          <svg class="w-4 h-4" fill="none" stroke="currentColor" stroke-width="2.2" viewBox="0 0 24 24"><path d="M12 5v14M5 12h14"/></svg>
-          رفع فاتورة
-        </button>
+        <div id="primary-action"></div>
       </div>
     </header>
     <main id="view" class="flex-1 overflow-y-auto p-6"></main>
@@ -707,7 +708,7 @@ const SETTINGS = [
 ];
 
 /* ── session ────────────────────────────────────────────────────────────── */
-let ME = USERS[1];
+let ME = USERS[0];
 const can = w => w==='view' ? true : ME.role!=='viewer' && (w!=='admin' || ME.role==='admin');
 
 const NAV = [
@@ -728,10 +729,11 @@ document.getElementById('login-modules').innerHTML =
  .map(m=>`<div class="bg-white/10 rounded-lg px-3 py-2">${m}</div>`).join('');
 
 document.getElementById('role-picker').innerHTML = ['admin','reviewer','viewer'].map((r,i)=>
- `<button data-r="${r}" onclick="pickRole('${r}')" class="role-btn text-xs font-bold rounded-lg py-2.5 border ${i===1?'border-brand-700 bg-brand-50 text-brand-800':'border-slate-300 text-slate-600'}">${ROLE_AR[r]}</button>`).join('');
+ `<button data-r="${r}" onclick="pickRole('${r}')" class="role-btn text-xs font-bold rounded-lg py-2.5 border ${i===0?'border-brand-700 bg-brand-50 text-brand-800':'border-slate-300 text-slate-600'}">${ROLE_AR[r]}</button>`).join('');
 
 function pickRole(r){
   ME = USERS.find(u=>u.role===r);
+  document.getElementById('login-email').value = ME.email;
   document.querySelectorAll('.role-btn').forEach(b=>{
     const on = b.dataset.r===r;
     b.className = `role-btn text-xs font-bold rounded-lg py-2.5 border ${on?'border-brand-700 bg-brand-50 text-brand-800':'border-slate-300 text-slate-600'}`;
@@ -778,9 +780,32 @@ function toggleCal(){
 /* ── router ─────────────────────────────────────────────────────────────── */
 let CURRENT = 'dashboard';
 const PAGES = {};
+/* one contextual "add" action per screen — shown active for the roles allowed
+   to perform it, disabled (with an explanation) for others, hidden for viewers */
+const PRIMARY = {
+  dashboard:['رفع فاتورة','openUpload()',['admin','reviewer']],
+  invoices: ['رفع فاتورة','openUpload()',['admin','reviewer']],
+  archive:  ['رفع فاتورة','openUpload()',['admin','reviewer']],
+  contracts:['عقد جديد','openNewContract()',['admin']],
+  subs:     ['مقاول باطن جديد','openNewSub()',['admin']],
+  projects: ['مشروع جديد','openNewProject()',['admin']],
+  users:    ['مستخدم جديد','openNewUser()',['admin']]
+};
+const BTN_SM = 'text-sm font-bold bg-brand-800 hover:bg-brand-900 text-white rounded-xl px-3.5 py-1.5';
+function primaryBtn(k, cls){
+  const p = PRIMARY[k]; if(!p || ME.role==='viewer') return '';
+  const [label, fn, roles] = p;
+  const plus = '<svg class="w-4 h-4" fill="none" stroke="currentColor" stroke-width="2.2" viewBox="0 0 24 24"><path d="M12 5v14M5 12h14"/></svg>';
+  return roles.includes(ME.role)
+    ? `<button onclick="${fn}" class="${cls||'bg-brand-800 hover:bg-brand-900 text-white text-sm font-bold rounded-xl px-4 py-2'} flex items-center gap-1.5">${plus}${label}</button>`
+    : `<button onclick="toast('هذا الإجراء يتطلب صلاحية مدير النظام')" title="يتطلب صلاحية مدير" class="bg-slate-200 text-slate-400 text-sm font-bold rounded-xl px-4 py-2 flex items-center gap-1.5 cursor-not-allowed">${plus}${label}</button>`;
+}
+function renderPrimary(k){ document.getElementById('primary-action').innerHTML = primaryBtn(k); }
+
 function go(k){
   CURRENT = k;
   toggleMenu(false);
+  renderPrimary(k);
   const n = NAV.find(x=>x.k===k)||{ar:'',en:''};
   document.getElementById('page-title').textContent = LANG==='ar'?n.ar:n.en;
   document.getElementById('page-sub').textContent = '';
@@ -947,7 +972,7 @@ PAGES.contracts = () => `
         <td class="font-bold">${fmtNum((BOQ[c.id]||[]).length)}</td>
         <td class="text-left text-brand-700 font-bold text-xs">فتح ←</td>
       </tr>`).join('')}</tbody></table></div>`,
-    `<button onclick="openBoqImport()" data-role="admin" class="text-sm font-bold bg-brand-50 text-brand-800 border border-brand-200 rounded-xl px-3.5 py-1.5 hover:bg-brand-100">استيراد جدول كميات من Excel</button>`)}
+    `<div class="flex items-center gap-2 flex-wrap">${primaryBtn('contracts',BTN_SM)}<button onclick="openBoqImport(1,'C-2025-014')" data-role="admin" class="text-sm font-bold bg-brand-50 text-brand-800 border border-brand-200 rounded-xl px-3.5 py-1.5 hover:bg-brand-100">استيراد جدول كميات من Excel</button></div>`)}
   <p class="text-xs text-slate-400 mt-3">ملاحظة النموذج الأولي: تعديل العقود وجداول الكميات متاح للمدير فقط (مطبَّق عبر سياسات RLS في الإصدار الإنتاجي).</p>
 `;
 
@@ -963,9 +988,11 @@ PAGES.subs = () => section('مقاولو الباطن', `<div class="tbl-wrap"><
       <td>${fmtNum(CONTRACTS.filter(c=>c.sub===s.id).length)}</td>
       <td>${fmtNum(INVOICES.filter(i=>i.sub===s.id).length)}</td>
       <td><span class="text-xs font-bold px-2.5 py-1 rounded-full ${s.status==='نشط'?'bg-emerald-100 text-emerald-700':'bg-amber-100 text-amber-800'}">${s.status}</span></td>
-    </tr>`}).join('')}</tbody></table></div>`);
+    </tr>`}).join('')}</tbody></table></div>`, primaryBtn('subs',BTN_SM));
 
-PAGES.projects = () => `<div class="grid grid-cols-1 lg:grid-cols-2 gap-4">
+PAGES.projects = () => `<div class="flex items-center justify-between gap-2 flex-wrap mb-4">
+    <h3 class="font-extrabold text-brand-800">المشاريع (${fmtNum(PROJECTS.length)})</h3>${primaryBtn('projects',BTN_SM)}
+  </div><div class="grid grid-cols-1 lg:grid-cols-2 gap-4">
   ${PROJECTS.map(p=>{
     const inv = INVOICES.filter(i=>i.proj===p.id);
     const val = inv.reduce((s,i)=>s+i.total,0);
@@ -994,7 +1021,7 @@ PAGES.users = () => section('المستخدمون والصلاحيات', `<div c
     <td class="text-xs text-slate-500">${u.role==='admin'?'كل الصلاحيات · إدارة العقود والإعدادات والمستخدمين'
       :u.role==='reviewer'?'رفع الفواتير · تصحيح الاستخراج · معالجة الملاحظات · الاعتماد للدفع'
       :'اطّلاع فقط — لا توجد أي صلاحية تعديل'}</td>
-  </tr>`).join('')}</tbody></table></div>`);
+  </tr>`).join('')}</tbody></table></div>`, primaryBtn('users',BTN_SM));
 
 PAGES.audit = () => section('سجل التدقيق — غير قابل للتعديل أو الحذف', `<div class="tbl-wrap"><table class="tbl w-full text-sm">
   <thead><tr><th>الوقت</th><th>المستخدم</th><th>الإجراء</th><th>السجل</th><th>التفاصيل</th></tr></thead>
@@ -1657,7 +1684,7 @@ function openContract(id){
     </div>
     <div class="flex items-center justify-between mb-3">
       <h4 class="font-extrabold text-brand-800">جدول الكميات (BoQ) — ${fmtNum(items.length)} بند</h4>
-      <button onclick="openBoqImport()" data-role="admin" class="text-xs font-bold text-brand-700 border border-brand-200 bg-brand-50 rounded-lg px-3 py-1.5">استيراد / تحديث من Excel</button>
+      <button onclick="openBoqImport(1,'${c.id}')" data-role="admin" class="text-xs font-bold text-brand-700 border border-brand-200 bg-brand-50 rounded-lg px-3 py-1.5">استيراد / تحديث من Excel</button>
     </div>
     <div class="tbl-wrap"><table class="tbl w-full text-sm">
       <thead><tr><th>الرمز</th><th>الوصف</th><th>الوحدة</th><th>الكمية التعاقدية</th><th>سعر الوحدة</th><th>القيمة</th><th>المفوتر</th><th>نسبة التنفيذ</th><th></th></tr></thead>
@@ -1687,13 +1714,231 @@ function openContract(id){
   document.querySelectorAll('[data-role]').forEach(el=>{el.style.display = el.dataset.role.split(',').includes(ME.role)?'':'none'});
 }
 
+/* ── create records (in-memory) ─────────────────────────────────────────── */
+const INP = 'w-full border border-slate-300 rounded-lg px-3 py-2 text-sm outline-none focus:ring-2 focus:ring-brand-300';
+const F = (label, inner, req=true) => `<label class="block"><span class="text-xs font-bold text-slate-600 mb-1 block">${label}${req?' <span class="text-red-500">*</span>':''}</span>${inner}</label>`;
+const formBtns = (cancel, submit, back) => `<div class="span2 flex justify-between gap-2 flex-wrap">
+  <div class="flex gap-2">${back?`<button type="button" onclick="${back}" class="px-4 py-2.5 rounded-xl border border-slate-300 font-bold text-sm">→ رجوع</button>`:''}
+  <button type="button" onclick="closeModal()" class="px-4 py-2.5 rounded-xl border border-slate-300 font-bold text-sm">${cancel}</button></div>
+  <button type="submit" class="px-5 py-2.5 rounded-xl bg-brand-800 text-white font-bold text-sm">${submit}</button></div>`;
+function readForm(id){ const o={}; document.getElementById(id).querySelectorAll('[name]').forEach(e=>o[e.name]=e.value.trim()); return o; }
+function formErr(id,msg){ document.getElementById(id).querySelector('.err').textContent=msg; }
+const wizNav = (steps,n) => `<div class="wiz flex items-center gap-2 px-6 py-4 border-b border-slate-200 shrink-0">${steps.map(([k,l])=>`
+  <div class="flex items-center gap-2 ${k<steps.length?'flex-1':''} ${n===k?'wiz-on':''}">
+    <div class="w-7 h-7 rounded-full text-xs font-extrabold flex items-center justify-center ${n>=k?'bg-brand-800 text-white':'bg-slate-200 text-slate-500'}">${k}</div>
+    <span class="text-sm font-bold ${n>=k?'text-brand-800':'text-slate-400'}">${l}</span>
+    ${k<steps.length?`<div class="flex-1 h-0.5 ${n>k?'bg-brand-800':'bg-slate-200'}"></div>`:''}
+  </div>`).join('')}</div>`;
+
+/* — contract wizard — */
+let NEWC = {items:[]};
+const nextContractNo = () => { const y=new Date().getFullYear(), n=CONTRACTS.filter(c=>c.id.startsWith('C-'+y)).length+1; return `C-${y}-${String(n).padStart(3,'0')}`; };
+function openNewContract(){ NEWC = {items:[]}; contractStep(1); }
+function contractStep(n){
+  const steps=[[1,'بيانات العقد'],[2,'جدول الكميات (BoQ)'],[3,'المراجعة والحفظ']];
+  let body='';
+  if(n===1) body=`<form id="cform" class="p-6 grid grid-cols-1 sm:grid-cols-2 gap-4" onsubmit="event.preventDefault();contractCollect1()">
+    ${F('رقم العقد',`<input name="id" value="${NEWC.id||nextContractNo()}" class="${INP}" dir="ltr">`)}
+    ${F('عنوان العقد',`<input name="title" value="${NEWC.title||''}" placeholder="مثال: أعمال التشطيبات الداخلية" class="${INP}">`)}
+    ${F('المشروع',`<select name="proj" class="${INP}">${PROJECTS.map(p=>`<option value="${p.id}" ${NEWC.proj===p.id?'selected':''}>${p.id} — ${p.name}</option>`).join('')}</select>`)}
+    ${F('مقاول الباطن',`<select name="sub" class="${INP}">${SUBS.map(x=>`<option value="${x.id}" ${NEWC.sub===x.id?'selected':''}>${x.name}</option>`).join('')}</select>`)}
+    ${F('قيمة العقد (ر.س)',`<input name="value" type="number" min="1" step="0.01" value="${NEWC.value||''}" class="${INP}" dir="ltr">`)}
+    ${F('تاريخ التوقيع',`<input name="signed" type="date" value="${NEWC.signed||''}" class="${INP}" dir="ltr">`,false)}
+    ${F('تاريخ البداية',`<input name="start" type="date" value="${NEWC.start||''}" class="${INP}" dir="ltr">`)}
+    ${F('تاريخ النهاية',`<input name="end" type="date" value="${NEWC.end||''}" class="${INP}" dir="ltr">`)}
+    ${F('نسبة المحتجز ٪',`<input name="retention" type="number" min="0" max="100" step="0.5" value="${NEWC.retention??10}" class="${INP}" dir="ltr">`)}
+    ${F('نسبة الدفعة المقدمة ٪',`<input name="advance" type="number" min="0" max="100" step="0.5" value="${NEWC.advance??10}" class="${INP}" dir="ltr">`)}
+    <div class="span2 err text-xs text-red-600 font-bold"></div>
+    ${formBtns('إلغاء','متابعة إلى جدول الكميات ←')}
+  </form>`;
+  if(n===2) body=`<div id="cform" class="p-6 space-y-4">
+    <div class="grid grid-cols-1 sm:grid-cols-2 gap-3">
+      <button onclick="boqCollect();openBoqImport(1,'${NEWC.id}')" class="border-2 border-dashed border-brand-300 bg-brand-50/50 rounded-2xl p-5 text-right hover:bg-brand-100">
+        <div class="font-extrabold text-brand-800 mb-1">📊 استيراد من Excel</div><div class="text-xs text-slate-500">رفع ملف xlsx ومطابقة الأعمدة ومعاينة البنود قبل الحفظ</div></button>
+      <button onclick="addBoqRow()" class="border-2 border-dashed border-slate-300 rounded-2xl p-5 text-right hover:bg-slate-50">
+        <div class="font-extrabold text-slate-700 mb-1">✎ إضافة بند يدوياً</div><div class="text-xs text-slate-500">إدخال البنود سطراً سطراً في الجدول أدناه</div></button>
+    </div>
+    <div class="tbl-wrap"><table class="tbl w-full text-sm"><thead><tr><th>رمز البند</th><th>الوصف (عربي)</th><th>الوحدة</th><th>الكمية</th><th>سعر الوحدة</th><th>القيمة</th><th></th></tr></thead>
+      <tbody id="boq-rows">${NEWC.items.length? NEWC.items.map(boqRow).join('') : '<tr><td colspan="7" class="text-center text-slate-400 py-6">لا توجد بنود بعد — استورد من Excel أو أضف بنداً يدوياً</td></tr>'}</tbody>
+      ${NEWC.items.length?`<tfoot><tr class="bg-slate-50 font-extrabold"><td colspan="5">إجمالي جدول الكميات</td><td colspan="2" id="boq-total">${fmtMoney(NEWC.items.reduce((a,b)=>a+(+b.qty||0)*(+b.price||0),0))}</td></tr></tfoot>`:''}
+    </table></div>
+    <p class="text-xs text-slate-400">يمكن حفظ العقد بدون بنود وإضافتها لاحقاً — لكن لن يُتحقق من أي فاتورة على هذا العقد قبل تسجيل جدول الكميات.</p>
+    <div class="err text-xs text-red-600 font-bold"></div>
+    <div class="flex justify-between gap-2 flex-wrap">
+      <button onclick="boqCollect();contractStep(1)" class="px-4 py-2.5 rounded-xl border border-slate-300 font-bold text-sm">→ رجوع</button>
+      <button onclick="contractCollect2()" class="px-5 py-2.5 rounded-xl bg-brand-800 text-white font-bold text-sm">مراجعة العقد ←</button></div>
+  </div>`;
+  if(n===3){
+    const total = NEWC.items.reduce((a,b)=>a+(+b.qty)*(+b.price),0);
+    const row = (k,v) => `<div class="flex justify-between gap-3 border-b border-slate-100 py-1.5"><span class="text-slate-500">${k}</span><span class="font-semibold text-left">${v}</span></div>`;
+    body=`<div id="cform" class="p-6 space-y-4">
+      <div class="grid grid-cols-1 lg:grid-cols-2 gap-4 text-sm">
+        <div class="border border-slate-200 rounded-2xl p-4">
+          <h4 class="font-extrabold text-brand-800 mb-2">بيانات العقد</h4>
+          ${row('رقم العقد',NEWC.id)}${row('العنوان',NEWC.title)}${row('المشروع',projOf(NEWC.proj).name)}${row('مقاول الباطن',subOf(NEWC.sub).name)}
+          ${row('قيمة العقد',fmtMoney(+NEWC.value))}${row('المدة',`${dt(NEWC.start)} — ${dt(NEWC.end)}`)}
+          ${row('المحتجز / الدفعة المقدمة',`${fmtPct(+NEWC.retention)} / ${fmtPct(+NEWC.advance)}`)}
+        </div>
+        <div class="border border-slate-200 rounded-2xl p-4">
+          <h4 class="font-extrabold text-brand-800 mb-2">جدول الكميات</h4>
+          ${row('عدد البنود',fmtNum(NEWC.items.length))}${row('إجمالي قيمة البنود',fmtMoney(total))}
+          ${total && Math.abs(total-(+NEWC.value))>1 ? `<div class="mt-3 text-xs ${total>+NEWC.value?'text-red-600':'text-amber-700'} font-bold">⚠ إجمالي البنود ${total>+NEWC.value?'يتجاوز':'أقل من'} قيمة العقد بمقدار ${fmtMoney(Math.abs(total-(+NEWC.value)))} — سيُسجَّل كملاحظة على العقد</div>`:''}
+        </div>
+      </div>
+      <div class="bg-slate-50 rounded-xl p-3 text-xs text-slate-600">عند الحفظ: يُنشأ العقد وبنوده، ويُسجَّل سعر كل بند كنقطة بداية في تاريخ الأسعار، وتُكتب العملية في سجل التدقيق باسم ${ME.name}.</div>
+      <div class="flex justify-between gap-2 flex-wrap">
+        <button onclick="contractStep(2)" class="px-4 py-2.5 rounded-xl border border-slate-300 font-bold text-sm">→ رجوع</button>
+        <button onclick="saveNewContract()" class="px-5 py-2.5 rounded-xl bg-brand-800 text-white font-bold text-sm">حفظ العقد</button></div>
+    </div>`;
+  }
+  showModal(mHead('عقد جديد', NEWC.id ? `${NEWC.id}${NEWC.title?' — '+NEWC.title:''}` : 'تسجيل عقد مقاول باطن مع جدول كمياته') + wizNav(steps,n) + `<div class="mbody flex-1 overflow-y-auto">${body}</div>`, 'w-full max-w-4xl max-h-[94vh]');
+}
+const boqRow = (b,ix) => `<tr>
+  <td><input value="${b.code||''}" data-k="code" placeholder="CN-006" class="${INP}" dir="ltr" style="min-width:6rem"></td>
+  <td><input value="${b.ar||''}" data-k="ar" placeholder="وصف البند" class="${INP}" style="min-width:14rem"></td>
+  <td><input value="${b.unit||''}" data-k="unit" placeholder="م³" class="${INP}" style="min-width:4rem"></td>
+  <td><input value="${b.qty||''}" data-k="qty" type="number" min="0" step="0.001" oninput="boqLive(this)" class="${INP}" dir="ltr" style="min-width:6rem"></td>
+  <td><input value="${b.price||''}" data-k="price" type="number" min="0" step="0.01" oninput="boqLive(this)" class="${INP}" dir="ltr" style="min-width:6rem"></td>
+  <td class="rowval whitespace-nowrap font-semibold">${fmtMoney((+b.qty||0)*(+b.price||0))}</td>
+  <td><button onclick="delBoqRow(${ix})" class="text-red-600 font-extrabold px-2" title="حذف">×</button></td></tr>`;
+function boqLive(el){
+  const tr=el.closest('tr'), q=+tr.querySelector('[data-k=qty]').value||0, pr=+tr.querySelector('[data-k=price]').value||0;
+  tr.querySelector('.rowval').textContent=fmtMoney(q*pr);
+  const tot=[...document.querySelectorAll('#boq-rows tr')].reduce((a,r)=>a+(+(r.querySelector('[data-k=qty]')?.value||0))*(+(r.querySelector('[data-k=price]')?.value||0)),0);
+  const t=document.getElementById('boq-total'); if(t) t.textContent=fmtMoney(tot);
+}
+function boqCollect(){
+  const rows=[...document.querySelectorAll('#boq-rows tr')].filter(r=>r.querySelector('[data-k]'));
+  NEWC.items = rows.map(r=>{ const o={}; r.querySelectorAll('[data-k]').forEach(e=>o[e.dataset.k]=e.value.trim()); return o; });
+}
+function addBoqRow(){ boqCollect(); NEWC.items.push({code:'',ar:'',unit:'',qty:'',price:''}); contractStep(2); setTimeout(()=>{const r=document.querySelectorAll('#boq-rows tr'); r[r.length-1]?.querySelector('input')?.focus();},0); }
+function delBoqRow(ix){ boqCollect(); NEWC.items.splice(ix,1); contractStep(2); }
+function contractCollect1(){
+  const f=readForm('cform');
+  if(!f.id||!f.title||!f.value||!f.start||!f.end) return formErr('cform','الحقول المعلَّمة بـ * إلزامية.');
+  if(CONTRACTS.some(c=>c.id===f.id)) return formErr('cform',`رقم العقد ${f.id} مستخدم مسبقاً.`);
+  if(+f.value<=0) return formErr('cform','قيمة العقد يجب أن تكون أكبر من صفر.');
+  if(f.end<f.start) return formErr('cform','تاريخ النهاية يجب أن يكون بعد تاريخ البداية.');
+  Object.assign(NEWC,f); contractStep(2);
+}
+function contractCollect2(){
+  boqCollect();
+  const bad = NEWC.items.find(b=>!b.code||!b.ar||!b.unit||!(+b.qty>0)||!(+b.price>=0));
+  if(bad) return formErr('cform','كل بند يحتاج رمزاً ووصفاً ووحدة وكمية أكبر من صفر وسعر وحدة.');
+  const codes=NEWC.items.map(b=>b.code.toUpperCase()); if(new Set(codes).size!==codes.length) return formErr('cform','رموز البنود مكررة — يجب أن يكون رمز كل بند فريداً داخل العقد.');
+  contractStep(3);
+}
+function saveNewContract(){
+  const c={id:NEWC.id, proj:NEWC.proj, sub:NEWC.sub, title:NEWC.title, value:+NEWC.value, start:NEWC.start, end:NEWC.end, retention:+NEWC.retention, advance:+NEWC.advance, signed:NEWC.signed||null, status:'ساري'};
+  CONTRACTS.push(c);
+  BOQ[c.id] = NEWC.items.map(b=>({code:b.code.toUpperCase(), ar:b.ar, en:b.en||'', unit:b.unit, qty:+b.qty, price:+b.price, invoicedQty:0}));
+  BOQ[c.id].forEach(b=>{ PRICE_HISTORY[b.code] = PRICE_HISTORY[b.code]||[{d:c.start,p:b.price,src:'العقد'}]; });
+  logAudit('إنشاء عقد', c.id, `${c.title} — ${subOf(c.sub).name} — ${fmtMoney(c.value)} — ${fmtNum(BOQ[c.id].length)} بند`);
+  toast(`تم إنشاء العقد ${c.id}`); NEWC={items:[]}; closeModal(); go('contracts'); openContract(c.id);
+}
+
+/* — subcontractor — */
+function vatHint(el){
+  const h=el.parentElement.querySelector('.vat-hint'), v=el.value.trim();
+  if(!v){ h.textContent='١٥ خانة، تبدأ وتنتهي بالرقم ٣'; h.className='vat-hint text-[11px] mt-1 text-slate-400'; return; }
+  const ok=/^3\d{13}3$/.test(v);
+  h.textContent = ok ? '✓ الصيغة صحيحة' : `✕ ${v.length} خانة — المطلوب ١٥ خانة تبدأ وتنتهي بالرقم ٣`;
+  h.className = `vat-hint text-[11px] mt-1 font-bold ${ok?'text-emerald-600':'text-red-600'}`;
+}
+function openNewSub(){
+  showModal(mHead('مقاول باطن جديد','يُتحقق من صيغة الرقم الضريبي عند الإدخال · يُسجَّل الإنشاء في سجل التدقيق') + `
+  <form id="sform" class="mbody flex-1 overflow-y-auto p-6 grid grid-cols-1 sm:grid-cols-2 gap-4" onsubmit="event.preventDefault();saveNewSub()">
+    ${F('الاسم (عربي)',`<input name="name" class="${INP}" placeholder="مؤسسة / شركة …">`)}
+    ${F('الاسم (إنجليزي)',`<input name="nameEn" class="${INP}" dir="ltr">`,false)}
+    ${F('رقم السجل التجاري',`<input name="cr" class="${INP}" dir="ltr" maxlength="10" placeholder="10 أرقام">`)}
+    ${F('الرقم الضريبي',`<input name="vat" class="${INP}" dir="ltr" maxlength="15" placeholder="3XXXXXXXXXXXXX3" oninput="vatHint(this)"><div class="vat-hint text-[11px] mt-1 text-slate-400">١٥ خانة، تبدأ وتنتهي بالرقم ٣</div>`)}
+    ${F('جهة الاتصال',`<input name="contact" class="${INP}">`,false)}
+    ${F('الهاتف',`<input name="phone" class="${INP}" dir="ltr">`,false)}
+    ${F('الآيبان',`<input name="iban" class="${INP}" dir="ltr" placeholder="SA…">`,false)}
+    ${F('البريد الإلكتروني',`<input name="email" type="email" class="${INP}" dir="ltr">`,false)}
+    <div class="span2 err text-xs text-red-600 font-bold"></div>
+    ${formBtns('إلغاء','حفظ المقاول')}
+  </form>`, 'w-full max-w-2xl max-h-[94vh]');
+}
+function saveNewSub(){
+  const f=readForm('sform');
+  if(!f.name||!f.cr||!f.vat) return formErr('sform','الاسم والسجل التجاري والرقم الضريبي إلزامية.');
+  if(!/^\d{10}$/.test(f.cr)) return formErr('sform','رقم السجل التجاري يجب أن يكون ١٠ أرقام.');
+  if(!/^3\d{13}3$/.test(f.vat)) return formErr('sform','الرقم الضريبي بصيغة غير صحيحة — ١٥ خانة تبدأ وتنتهي بالرقم ٣.');
+  if(SUBS.some(x=>x.vat===f.vat)) return formErr('sform','يوجد مقاول مسجّل بهذا الرقم الضريبي.');
+  const x={id:'S-'+String(SUBS.length+1).padStart(2,'0'), name:f.name, nameEn:f.nameEn, cr:f.cr, vat:f.vat, phone:f.phone, iban:f.iban, status:'نشط'};
+  SUBS.push(x); logAudit('إنشاء مقاول باطن', x.id, `${x.name} — س.ت ${x.cr} — ض ${x.vat}`);
+  toast(`تم تسجيل ${x.name}`); closeModal(); go('subs');
+}
+
+/* — project — */
+function openNewProject(){
+  const code='P-'+String(PROJECTS.length+1).padStart(3,'0');
+  showModal(mHead('مشروع جديد','تُربط العقود والفواتير بالمشروع لاحقاً') + `
+  <form id="pform" class="mbody flex-1 overflow-y-auto p-6 grid grid-cols-1 sm:grid-cols-2 gap-4" onsubmit="event.preventDefault();saveNewProject()">
+    ${F('رمز المشروع',`<input name="id" value="${code}" class="${INP}" dir="ltr">`)}
+    ${F('اسم المشروع (عربي)',`<input name="name" class="${INP}">`)}
+    ${F('اسم المشروع (إنجليزي)',`<input name="nameEn" class="${INP}" dir="ltr">`,false)}
+    ${F('المدينة',`<input name="city" class="${INP}">`)}
+    ${F('العميل / المالك',`<input name="client" class="${INP}">`)}
+    ${F('ميزانية المشروع (ر.س)',`<input name="budget" type="number" min="0" step="0.01" class="${INP}" dir="ltr">`)}
+    ${F('تاريخ البداية',`<input name="start" type="date" class="${INP}" dir="ltr">`)}
+    ${F('تاريخ النهاية',`<input name="end" type="date" class="${INP}" dir="ltr">`)}
+    <div class="span2 err text-xs text-red-600 font-bold"></div>
+    ${formBtns('إلغاء','حفظ المشروع')}
+  </form>`, 'w-full max-w-2xl max-h-[94vh]');
+}
+function saveNewProject(){
+  const f=readForm('pform');
+  if(!f.id||!f.name||!f.city||!f.client||!f.budget||!f.start||!f.end) return formErr('pform','الحقول المعلَّمة بـ * إلزامية.');
+  if(PROJECTS.some(p=>p.id===f.id)) return formErr('pform',`رمز المشروع ${f.id} مستخدم مسبقاً.`);
+  if(f.end<f.start) return formErr('pform','تاريخ النهاية يجب أن يكون بعد تاريخ البداية.');
+  const p={id:f.id, name:f.name, nameEn:f.nameEn, city:f.city, client:f.client, start:f.start, end:f.end, budget:+f.budget};
+  PROJECTS.push(p); logAudit('إنشاء مشروع', p.id, `${p.name} — ${p.city} — ${fmtMoney(p.budget)}`);
+  toast(`تم إنشاء المشروع ${p.id}`); closeModal(); go('projects');
+}
+
+/* — user — */
+function openNewUser(){
+  showModal(mHead('مستخدم جديد','في الإصدار الإنتاجي: دعوة عبر Supabase Auth وتعيين الدور في جدول profiles') + `
+  <form id="uform" class="mbody flex-1 overflow-y-auto p-6 grid grid-cols-1 sm:grid-cols-2 gap-4" onsubmit="event.preventDefault();saveNewUser()">
+    ${F('الاسم',`<input name="name" class="${INP}">`)}
+    ${F('البريد الإلكتروني',`<input name="email" type="email" class="${INP}" dir="ltr" placeholder="name@alareen.sa">`)}
+    ${F('الدور',`<select name="role" class="${INP}">${Object.entries(ROLE_AR).map(([k,v])=>`<option value="${k}">${v}</option>`).join('')}</select>`)}
+    ${F('المسمى الوظيفي',`<input name="title" class="${INP}">`,false)}
+    <div class="span2 text-xs text-slate-500 bg-slate-50 rounded-xl p-3">مدير: كل الصلاحيات · محاسب مراجع: رفع الفواتير ومعالجة الملاحظات والاعتماد · مطّلع: قراءة فقط.</div>
+    <div class="span2 err text-xs text-red-600 font-bold"></div>
+    ${formBtns('إلغاء','إرسال الدعوة')}
+  </form>`, 'w-full max-w-2xl max-h-[94vh]');
+}
+function saveNewUser(){
+  const f=readForm('uform');
+  if(!f.name||!f.email) return formErr('uform','الاسم والبريد الإلكتروني إلزاميان.');
+  if(USERS.some(u=>u.email.toLowerCase()===f.email.toLowerCase())) return formErr('uform','هذا البريد مسجّل مسبقاً.');
+  const u={id:'u'+(USERS.length+1), name:f.name, email:f.email, role:f.role, title:f.title||ROLE_AR[f.role]};
+  USERS.push(u); logAudit('دعوة مستخدم', u.id, `${u.name} — ${u.email} — ${ROLE_AR[u.role]}`);
+  toast(`أُرسلت الدعوة إلى ${u.email}`); closeModal(); go('users');
+}
+
 /* ── BoQ Excel import wizard ────────────────────────────────────────────── */
-let STEP = 1;
-function openBoqImport(step){
-  STEP = step||1;
-  const nav = `<div class="flex items-center gap-2 px-6 py-4 border-b border-slate-200 shrink-0">
+let STEP = 1, IMPORT_CID = 'C-2025-014';
+/* the sample rows the "uploaded" workbook resolves to — the wizard cannot parse a real xlsx in a mockup */
+const SAMPLE_BOQ = BOQ['C-2025-014'].map(b=>({...b, invoicedQty:0}));
+function confirmImport(){
+  const cid = IMPORT_CID, creating = NEWC.id===cid && !CONTRACTS.some(c=>c.id===cid);
+  if(creating){ NEWC.items = SAMPLE_BOQ.map(b=>({...b})); toast(`تمت قراءة ${fmtNum(NEWC.items.length)} بند من الملف`); contractStep(2); return; }
+  const had = (BOQ[cid]||[]).length;
+  if(!had) BOQ[cid] = SAMPLE_BOQ.map(b=>({...b}));
+  logAudit('استيراد جدول كميات', cid, `استيراد ${fmtNum(BOQ[cid].length)} بند من ملف Excel`);
+  toast(had ? 'تم تحديث جدول الكميات' : `تم استيراد ${fmtNum(BOQ[cid].length)} بند إلى العقد ${cid}`);
+  closeModal(); go('contracts'); openContract(cid);
+}
+function openBoqImport(step, cid){
+  STEP = step||1; if(cid) IMPORT_CID = cid;
+  const ic = CONTRACTS.find(c=>c.id===IMPORT_CID) || {id:IMPORT_CID, title:NEWC.title||'عقد جديد'};
+  const nav = `<div class="wiz flex items-center gap-2 px-6 py-4 border-b border-slate-200 shrink-0">
     ${[[1,'رفع الملف'],[2,'مطابقة الأعمدة'],[3,'المعاينة والتأكيد']].map(([n,l])=>`
-      <div class="flex items-center gap-2 ${n<3?'flex-1':''}">
+      <div class="flex items-center gap-2 ${n<3?'flex-1':''} ${STEP===n?'wiz-on':''}">
         <div class="w-7 h-7 rounded-full text-xs font-extrabold flex items-center justify-center ${STEP>=n?'bg-brand-800 text-white':'bg-slate-200 text-slate-500'}">${n}</div>
         <span class="text-sm font-bold ${STEP>=n?'text-brand-800':'text-slate-400'}">${l}</span>
         ${n<3?`<div class="flex-1 h-0.5 ${STEP>n?'bg-brand-800':'bg-slate-200'}"></div>`:''}
@@ -1710,7 +1955,7 @@ function openBoqImport(step){
     </div>
     <div class="flex items-center gap-3 border border-slate-200 rounded-xl px-4 py-3">
       <div class="w-9 h-9 rounded-lg bg-emerald-50 text-emerald-700 flex items-center justify-center font-extrabold text-xs">XLS</div>
-      <div class="flex-1"><div class="font-bold text-sm" dir="ltr">BoQ_Structural_C-2025-014.xlsx</div>
+      <div class="flex-1"><div class="font-bold text-sm" dir="ltr">BoQ_${IMPORT_CID}.xlsx</div>
       <div class="text-xs text-slate-400">١٤٢ ك.ب · ورقة "BOQ" · ٥ صفوف بيانات</div></div>
       <button onclick="openBoqImport(2)" class="text-xs font-bold text-brand-700">متابعة ←</button>
     </div>
@@ -1740,7 +1985,7 @@ function openBoqImport(step){
   }
 
   if(STEP===3){
-    const items = BOQ['C-2025-014'];
+    const items = SAMPLE_BOQ;
     body = `<div class="p-6">
       <div class="flex gap-3 mb-4">
         <div class="flex-1 bg-emerald-50 border border-emerald-200 rounded-xl p-3 text-center"><div class="text-2xl font-extrabold text-emerald-700">${fmtNum(items.length)}</div><div class="text-xs text-emerald-800">صف صالح</div></div>
@@ -1764,12 +2009,12 @@ function openBoqImport(step){
       </div>
       <div class="flex justify-between mt-5">
         <button onclick="openBoqImport(2)" class="px-4 py-2.5 rounded-xl border border-slate-300 font-bold text-sm">→ رجوع</button>
-        <button onclick="closeModal()" class="px-5 py-2.5 rounded-xl bg-brand-800 text-white font-bold text-sm">تأكيد الاستيراد (${fmtNum(items.length)} بند)</button>
+        <button onclick="confirmImport()" class="px-5 py-2.5 rounded-xl bg-brand-800 text-white font-bold text-sm">تأكيد الاستيراد (${fmtNum(items.length)} بند)</button>
       </div>
     </div>`;
   }
 
-  showModal(mHead('استيراد جدول كميات من Excel','العقد C-2025-014 — أعمال الخرسانة والهيكل الإنشائي') + nav +
+  showModal(mHead('استيراد جدول كميات من Excel',`العقد ${ic.id} — ${ic.title}`) + nav +
     `<div class="flex-1 overflow-y-auto">${body}</div>`, 'w-full max-w-4xl max-h-[92vh]');
 }
 
