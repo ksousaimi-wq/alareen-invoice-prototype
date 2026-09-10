@@ -343,6 +343,33 @@ svg{display:block;vertical-align:middle}
   table.tbl tbody tr:hover{background:#f8fafb}
   .tab.active{border-color:#0f3133;color:#0f3133;font-weight:700}
   input,select,textarea{font-family:inherit}
+  [hidden]{display:none!important}
+  .tbl-wrap{overflow-x:auto;-webkit-overflow-scrolling:touch}
+  #menu-btn,#scrim{display:none}
+  #toast{position:fixed;bottom:1.25rem;left:50%;transform:translateX(-50%);z-index:70;background:#0f3133;color:#fff;font-size:.85rem;font-weight:700;padding:.65rem 1.1rem;border-radius:.75rem;box-shadow:0 10px 30px rgba(0,0,0,.25);opacity:0;pointer-events:none;transition:opacity .2s;max-width:calc(100vw - 2rem);text-align:center}
+  #toast.on{opacity:1}
+  .flag-resolved{border-color:#a7f3d0!important}
+  .flag-resolved .flag-head{background:#ecfdf5!important}
+  /* ── phone / tablet: sidebar becomes a drawer, modals go full-screen ── */
+  @media (max-width:1023px){
+    #scr-app{flex-direction:column}
+    #sidebar{position:fixed;top:0;bottom:0;right:0;width:16rem;z-index:60;transform:translateX(100%);transition:transform .2s ease;box-shadow:-8px 0 30px rgba(0,0,0,.25)}
+    [dir=ltr] #sidebar{right:auto;left:0;transform:translateX(-100%)}
+    #sidebar.open{transform:none}
+    #scrim.open{display:block;position:fixed;inset:0;background:rgba(0,0,0,.45);z-index:55}
+    #menu-btn{display:inline-flex}
+    header.topbar{height:auto;min-height:3.5rem;padding:.5rem .75rem;flex-wrap:wrap;gap:.5rem}
+    #page-title{font-size:1rem}
+    #view{padding:.75rem}
+    #modal{padding:0}
+    #modal-box{max-width:100%!important;width:100%;height:100vh!important;max-height:100vh!important;border-radius:0}
+    .tbl-wrap table{min-width:560px}
+    .tabs{overflow-x:auto;white-space:nowrap}
+    .tabs button{flex-shrink:0}
+    .mhead,.mfoot{padding:.75rem 1rem}
+    .mbody{padding:1rem}
+  }
+  @media (prefers-reduced-motion:reduce){.fade{animation:none}#sidebar,#toast{transition:none}}
 </style>
 </head>
 <body class="text-slate-800">
@@ -387,8 +414,9 @@ svg{display:block;vertical-align:middle}
 
 <!-- ══════════════════════ APP ══════════════════════ -->
 <div id="scr-app" class="screen hidden min-h-screen flex">
-  <!-- sidebar -->
-  <aside class="w-64 shrink-0 bg-brand-800 text-white flex flex-col">
+  <!-- sidebar (slides in as a drawer below 1024px) -->
+  <div id="scrim" onclick="toggleMenu(false)"></div>
+  <aside id="sidebar" class="w-64 shrink-0 bg-brand-800 text-white flex flex-col">
     <div class="p-5 flex items-center gap-2.5 border-b border-white/10">
       <div class="w-10 h-10 rounded-xl bg-white flex items-center justify-center text-brand-900">
         <svg viewBox="0 0 118 120" class="w-6 h-6" fill="currentColor"><path fill-rule="evenodd" d="M16 8 H70 C94 8 108 22 108 44 C108 62 96 74 79 76 L108 114 H80 L52 76 H34 V114 H16 Z M34 26 H68 C80 26 88 33 88 44 C88 55 80 60 68 60 H34 Z"/></svg>
@@ -402,13 +430,17 @@ svg{display:block;vertical-align:middle}
     <div class="p-3 border-t border-white/10">
       <div id="user-chip" class="flex items-center gap-2.5 px-2 py-2"></div>
       <button onclick="logout()" class="w-full mt-1 text-xs text-brand-300 hover:text-white py-1.5">تسجيل الخروج</button>
+      <button onclick="location.reload()" class="w-full text-[11px] text-brand-300 hover:text-white py-1">إعادة ضبط البيانات التجريبية ↺</button>
     </div>
   </aside>
 
   <!-- main -->
   <div class="flex-1 flex flex-col min-w-0">
-    <header class="h-16 bg-white border-b border-slate-200 flex items-center justify-between px-6 gap-4">
+    <header class="topbar h-16 bg-white border-b border-slate-200 flex items-center justify-between px-6 gap-4">
       <div class="flex items-center gap-3 min-w-0">
+        <button id="menu-btn" onclick="toggleMenu()" aria-label="القائمة" class="w-9 h-9 rounded-lg border border-slate-300 items-center justify-center shrink-0 text-brand-800">
+          <svg class="w-5 h-5" fill="none" stroke="currentColor" stroke-width="2.2" viewBox="0 0 24 24"><path d="M4 7h16M4 12h16M4 17h16"/></svg>
+        </button>
         <h1 id="page-title" class="text-lg font-extrabold text-brand-800 truncate">لوحة المعلومات</h1>
         <span id="page-sub" class="text-sm text-slate-400 truncate"></span>
       </div>
@@ -435,6 +467,7 @@ svg{display:block;vertical-align:middle}
 <div id="modal" class="hidden fixed inset-0 z-50 bg-black/50 backdrop-blur-[2px] flex items-center justify-center p-4" onclick="if(event.target===this)closeModal()">
   <div id="modal-box" class="bg-white rounded-2xl shadow-2xl max-h-[94vh] overflow-hidden flex flex-col fade"></div>
 </div>
+<div id="toast" role="status" aria-live="polite"></div>
 
 <script>
 /* ═══════════════════════════════════════════════════════════════════════════
@@ -457,10 +490,10 @@ function dt(iso){
   if(!iso) return '—';
   const d = new Date(iso+'T00:00:00');
   if(CAL==='g') return gFmt.format(d);
-  if(CAL==='h') return hFmt.format(d)+' هـ';
-  return gFmt.format(d)+' · '+hFmt.format(d)+' هـ';
+  if(CAL==='h') return hFmt.format(d);
+  return gFmt.format(d)+' · '+hFmt.format(d);
 }
-function dtBoth(iso){const d=new Date(iso+'T00:00:00');return gFmt.format(d)+' م · '+hFmt.format(d)+' هـ';}
+function dtBoth(iso){const d=new Date(iso+'T00:00:00');return gFmt.format(d)+' م · '+hFmt.format(d);}
 
 /* ── demo database ──────────────────────────────────────────────────────── */
 const USERS = [
@@ -618,6 +651,26 @@ const INVOICES = [
 ];
 const invKey = i => i.key || i.id;
 const findInv = k => INVOICES.find(i=>invKey(i)===k);
+/* flags carry an in-memory resolution once a reviewer handles them (reset on reload) */
+const openFlags   = i => (i.flags||[]).filter(f=>!f.resolved);
+const blockingOpen= i => openFlags(i).filter(f=>FLAGS[f.t].sev==='blocking').length;
+const FINAL       = ['approved','paid','archived','rejected'];
+const nowStr = () => { const d=new Date(), p=n=>String(n).padStart(2,'0');
+  return `${d.getFullYear()}-${p(d.getMonth()+1)}-${p(d.getDate())} ${p(d.getHours())}:${p(d.getMinutes())}`; };
+function logAudit(a,o,d){ AUDIT.unshift({t:nowStr(), u:ME.name, a, o, d}); }
+function addEvent(i,title,detail){ (i.events=i.events||[]).push([title, ME.name, nowStr(), detail]); }
+function toast(msg){ const t=document.getElementById('toast'); t.textContent=msg; t.classList.add('on');
+  clearTimeout(toast._h); toast._h=setTimeout(()=>t.classList.remove('on'),2800); }
+/* the payment gate: status is derived from open blocking flags, never set by hand */
+function recomputeStatus(i){
+  if(FINAL.includes(i.status) || i.status==='ocr_review') return;
+  i.status = blockingOpen(i) ? 'flagged' : 'clean';
+}
+function toggleMenu(on){
+  const sb=document.getElementById('sidebar'), sc=document.getElementById('scrim');
+  const open = on===undefined ? !sb.classList.contains('open') : on;
+  sb.classList.toggle('open',open); sc.classList.toggle('open',open);
+}
 const subOf   = id => SUBS.find(s=>s.id===id)||{name:'—'};
 const projOf  = id => PROJECTS.find(p=>p.id===id)||{name:'—'};
 const conOf   = id => CONTRACTS.find(c=>c.id===id)||{id:'—',title:'—'};
@@ -727,6 +780,7 @@ let CURRENT = 'dashboard';
 const PAGES = {};
 function go(k){
   CURRENT = k;
+  toggleMenu(false);
   const n = NAV.find(x=>x.k===k)||{ar:'',en:''};
   document.getElementById('page-title').textContent = LANG==='ar'?n.ar:n.en;
   document.getElementById('page-sub').textContent = '';
@@ -770,7 +824,7 @@ PAGES.dashboard = () => {
   const paidSum  = INVOICES.filter(i=>['paid','archived'].includes(i.status)).reduce((s,i)=>s+i.total,0);
 
   const catCount = {};
-  INVOICES.forEach(i=>(i.flags||[]).forEach(f=>{const c=FLAGS[f.t].cat; catCount[c]=(catCount[c]||0)+1}));
+  INVOICES.forEach(i=>openFlags(i).forEach(f=>{const c=FLAGS[f.t].cat; catCount[c]=(catCount[c]||0)+1}));
   const maxCat = Math.max(...Object.values(catCount),1);
 
   const byProject = PROJECTS.map(p=>{
@@ -825,16 +879,16 @@ PAGES.dashboard = () => {
           <div class="text-xs text-slate-400 mt-1">${fmtNum(p.c)} فاتورة</div>
         </div>`).join('')}
     </div>`)}
-    ${section('الإجماليات حسب مقاول الباطن', `<table class="tbl w-full text-sm">
+    ${section('الإجماليات حسب مقاول الباطن', `<div class="tbl-wrap"><table class="tbl w-full text-sm">
       <thead><tr><th>المقاول</th><th>عدد</th><th>مُعلَّمة</th><th>الإجمالي</th></tr></thead>
       <tbody>${bySub.map(s=>`<tr>
         <td class="font-semibold">${s.n}</td>
         <td>${fmtNum(s.c)}</td>
         <td>${s.f? `<span class="text-red-600 font-bold">${fmtNum(s.f)}</span>`:'—'}</td>
-        <td class="font-bold">${fmtMoney(s.v)}</td></tr>`).join('')}</tbody></table>`)}
+        <td class="font-bold">${fmtMoney(s.v)}</td></tr>`).join('')}</tbody></table></div>`)}
   </div>
 
-  ${section('يتطلب إجراءً', `<table class="tbl w-full text-sm">
+  ${section('يتطلب إجراءً', `<div class="tbl-wrap"><table class="tbl w-full text-sm">
     <thead><tr><th>الفاتورة</th><th>المقاول</th><th>التاريخ</th><th>المبلغ</th><th>الملاحظات</th><th></th></tr></thead>
     <tbody>${INVOICES.filter(i=>['flagged','ocr_review'].includes(i.status)).map(i=>`
       <tr>
@@ -844,10 +898,10 @@ PAGES.dashboard = () => {
         <td class="font-semibold">${fmtMoney(i.total)}</td>
         <td class="space-x-1 space-x-reverse">${i.status==='ocr_review'
           ? '<span class="text-[11px] font-semibold border rounded-lg px-2 py-0.5 bg-amber-50 text-amber-800 border-amber-200">ثقة استخراج منخفضة</span>'
-          : (i.flags||[]).map(f=>flagChip(f.t)).join(' ')}</td>
+          : openFlags(i).map(f=>flagChip(f.t)).join(' ')}</td>
         <td class="text-left"><button onclick="${i.status==='ocr_review'?`openOcr('${invKey(i)}')`:`openInvoice('${invKey(i)}')`}"
             class="text-brand-700 font-bold hover:underline text-xs">${i.status==='ocr_review'?'مراجعة الاستخراج':'فتح'} ←</button></td>
-      </tr>`).join('')}</tbody></table>`)}
+      </tr>`).join('')}</tbody></table></div>`)}
   `;
 };
 
@@ -862,7 +916,7 @@ PAGES.invoices = () => {
       class="text-sm font-bold px-4 py-2 rounded-xl border ${INV_FILTER===k?'bg-brand-800 text-white border-brand-800':'bg-white border-slate-300 text-slate-600 hover:bg-slate-50'}">
       ${l} <span class="opacity-60">${fmtNum(k==='all'?INVOICES.length:INVOICES.filter(i=>i.status===k).length)}</span></button>`).join('')}
   </div>
-  ${section(`الفواتير (${fmtNum(list.length)})`, `<table class="tbl w-full text-sm">
+  ${section(`الفواتير (${fmtNum(list.length)})`, `<div class="tbl-wrap"><table class="tbl w-full text-sm">
     <thead><tr><th>رقم الفاتورة</th><th>مقاول الباطن</th><th>العقد</th><th>التاريخ</th><th>الإجمالي</th><th>الحالة</th><th>الملاحظات</th><th></th></tr></thead>
     <tbody>${list.map(i=>`
       <tr class="cursor-pointer" onclick="openInvoice('${invKey(i)}')">
@@ -872,15 +926,15 @@ PAGES.invoices = () => {
         <td class="text-slate-500 whitespace-nowrap">${dt(i.date)}</td>
         <td class="font-semibold whitespace-nowrap">${fmtMoney(i.total)}</td>
         <td>${badge(i.status)}</td>
-        <td>${(i.flags||[]).length? `<span class="font-extrabold ${(i.flags||[]).some(f=>FLAGS[f.t].sev==='blocking')?'text-red-600':'text-amber-600'}">${fmtNum(i.flags.length)}</span>`:'<span class="text-emerald-600">✓</span>'}</td>
+        <td>${openFlags(i).length? `<span class="font-extrabold ${blockingOpen(i)?'text-red-600':'text-amber-600'}">${fmtNum(openFlags(i).length)}</span>`:'<span class="text-emerald-600">✓</span>'}</td>
         <td class="text-left text-brand-700 font-bold text-xs">فتح ←</td>
-      </tr>`).join('')}</tbody></table>`)}
+      </tr>`).join('')}</tbody></table></div>`)}
   `;
 };
 
 /* ── PAGE: contracts ────────────────────────────────────────────────────── */
 PAGES.contracts = () => `
-  ${section('العقود', `<table class="tbl w-full text-sm">
+  ${section('العقود', `<div class="tbl-wrap"><table class="tbl w-full text-sm">
     <thead><tr><th>رقم العقد</th><th>المشروع</th><th>مقاول الباطن</th><th>قيمة العقد</th><th>المدة</th><th>محتجز / دفعة مقدمة</th><th>بنود BoQ</th><th></th></tr></thead>
     <tbody>${CONTRACTS.map(c=>`
       <tr class="cursor-pointer" onclick="openContract('${c.id}')">
@@ -892,13 +946,13 @@ PAGES.contracts = () => `
         <td class="text-slate-600">${fmtPct(c.retention)} / ${fmtPct(c.advance)}</td>
         <td class="font-bold">${fmtNum((BOQ[c.id]||[]).length)}</td>
         <td class="text-left text-brand-700 font-bold text-xs">فتح ←</td>
-      </tr>`).join('')}</tbody></table>`,
+      </tr>`).join('')}</tbody></table></div>`,
     `<button onclick="openBoqImport()" data-role="admin" class="text-sm font-bold bg-brand-50 text-brand-800 border border-brand-200 rounded-xl px-3.5 py-1.5 hover:bg-brand-100">استيراد جدول كميات من Excel</button>`)}
   <p class="text-xs text-slate-400 mt-3">ملاحظة النموذج الأولي: تعديل العقود وجداول الكميات متاح للمدير فقط (مطبَّق عبر سياسات RLS في الإصدار الإنتاجي).</p>
 `;
 
 /* ── PAGE: subcontractors / projects / users / audit / settings ─────────── */
-PAGES.subs = () => section('مقاولو الباطن', `<table class="tbl w-full text-sm">
+PAGES.subs = () => section('مقاولو الباطن', `<div class="tbl-wrap"><table class="tbl w-full text-sm">
   <thead><tr><th>الاسم</th><th>السجل التجاري</th><th>الرقم الضريبي</th><th>العقود</th><th>الفواتير</th><th>الحالة</th></tr></thead>
   <tbody>${SUBS.map(s=>{
     const bad = !/^3\d{13}3$/.test(s.vat);
@@ -909,7 +963,7 @@ PAGES.subs = () => section('مقاولو الباطن', `<table class="tbl w-ful
       <td>${fmtNum(CONTRACTS.filter(c=>c.sub===s.id).length)}</td>
       <td>${fmtNum(INVOICES.filter(i=>i.sub===s.id).length)}</td>
       <td><span class="text-xs font-bold px-2.5 py-1 rounded-full ${s.status==='نشط'?'bg-emerald-100 text-emerald-700':'bg-amber-100 text-amber-800'}">${s.status}</span></td>
-    </tr>`}).join('')}</tbody></table>`);
+    </tr>`}).join('')}</tbody></table></div>`);
 
 PAGES.projects = () => `<div class="grid grid-cols-1 lg:grid-cols-2 gap-4">
   ${PROJECTS.map(p=>{
@@ -931,7 +985,7 @@ PAGES.projects = () => `<div class="grid grid-cols-1 lg:grid-cols-2 gap-4">
       <div class="text-xs text-slate-400 mt-3">${dt(p.start)} — ${dt(p.end)}</div>
     </div>`}).join('')}</div>`;
 
-PAGES.users = () => section('المستخدمون والصلاحيات', `<table class="tbl w-full text-sm">
+PAGES.users = () => section('المستخدمون والصلاحيات', `<div class="tbl-wrap"><table class="tbl w-full text-sm">
   <thead><tr><th>المستخدم</th><th>البريد</th><th>الدور</th><th>الصلاحيات</th></tr></thead>
   <tbody>${USERS.map(u=>`<tr>
     <td><div class="font-bold">${u.name}</div><div class="text-xs text-slate-400">${u.title}</div></td>
@@ -940,26 +994,26 @@ PAGES.users = () => section('المستخدمون والصلاحيات', `<table
     <td class="text-xs text-slate-500">${u.role==='admin'?'كل الصلاحيات · إدارة العقود والإعدادات والمستخدمين'
       :u.role==='reviewer'?'رفع الفواتير · تصحيح الاستخراج · معالجة الملاحظات · الاعتماد للدفع'
       :'اطّلاع فقط — لا توجد أي صلاحية تعديل'}</td>
-  </tr>`).join('')}</tbody></table>`);
+  </tr>`).join('')}</tbody></table></div>`);
 
-PAGES.audit = () => section('سجل التدقيق — غير قابل للتعديل أو الحذف', `<table class="tbl w-full text-sm">
+PAGES.audit = () => section('سجل التدقيق — غير قابل للتعديل أو الحذف', `<div class="tbl-wrap"><table class="tbl w-full text-sm">
   <thead><tr><th>الوقت</th><th>المستخدم</th><th>الإجراء</th><th>السجل</th><th>التفاصيل</th></tr></thead>
   <tbody>${AUDIT.map(a=>`<tr>
     <td class="text-slate-500 whitespace-nowrap" dir="ltr">${a.t}</td>
     <td class="font-semibold">${a.u}</td>
     <td><span class="text-xs font-bold bg-slate-100 px-2 py-1 rounded">${a.a}</span></td>
     <td class="font-bold text-brand-800">${a.o}</td>
-    <td class="text-slate-600">${a.d}</td></tr>`).join('')}</tbody></table>`);
+    <td class="text-slate-600">${a.d}</td></tr>`).join('')}</tbody></table></div>`);
 
 PAGES.settings = () => `
   <div class="grid grid-cols-1 lg:grid-cols-2 gap-4">
-    ${section('حدود التحقق', `<table class="tbl w-full text-sm">
+    ${section('حدود التحقق', `<div class="tbl-wrap"><table class="tbl w-full text-sm">
       <thead><tr><th>الإعداد</th><th>القيمة</th><th></th></tr></thead>
       <tbody>${SETTINGS.map(s=>`<tr>
         <td class="font-semibold">${s.k}<div class="text-[11px] text-slate-400" dir="ltr">${s.key}</div></td>
         <td class="font-bold text-brand-800">${s.v}</td>
         <td class="text-left"><button class="text-xs text-brand-700 font-bold hover:underline">تعديل</button></td>
-      </tr>`).join('')}</tbody></table>`)}
+      </tr>`).join('')}</tbody></table></div>`)}
     <div class="space-y-4">
       ${section('مزوّد الاستخراج (OCR)', `<div class="p-5 space-y-3 text-sm">
         ${[['طبقة نص PDF الرقمي','pdf-text','مفعّل — الأساس',true],
@@ -1018,12 +1072,12 @@ function renderResults(){
   const hits = INVOICES.filter(i=>{
     if(SEARCH.status && i.status!==SEARCH.status) return false;
     if(SEARCH.sub && i.sub!==SEARCH.sub) return false;
-    if(SEARCH.flag && !(i.flags||[]).some(f=>FLAGS[f.t].cat===SEARCH.flag)) return false;
+    if(SEARCH.flag && !openFlags(i).some(f=>FLAGS[f.t].cat===SEARCH.flag)) return false;
     if(!q) return true;
     const hay = [i.id, subOf(i.sub).name, projOf(i.proj).name, i.contract||'', i.vat, ...i.lines.map(l=>l.desc+' '+l.code)].join(' ');
     return hay.includes(q);
   });
-  el.innerHTML = section(`النتائج (${fmtNum(hits.length)}) — أرشيف غير قابل للحذف`, hits.length? `<table class="tbl w-full text-sm">
+  el.innerHTML = section(`النتائج (${fmtNum(hits.length)}) — أرشيف غير قابل للحذف`, hits.length? `<div class="tbl-wrap"><table class="tbl w-full text-sm">
     <thead><tr><th>الفاتورة</th><th>المقاول</th><th>المشروع</th><th>التاريخ</th><th>الإجمالي</th><th>الحالة</th><th>حفظ حتى</th></tr></thead>
     <tbody>${hits.map(i=>{
       const keep = new Date(i.date+'T00:00:00'); keep.setFullYear(keep.getFullYear()+6);
@@ -1035,7 +1089,7 @@ function renderResults(){
         <td class="font-semibold whitespace-nowrap">${fmtMoney(i.total)}</td>
         <td>${badge(i.status)}</td>
         <td class="text-xs text-slate-400 whitespace-nowrap">${gFmt.format(keep)}</td>
-      </tr>`}).join('')}</tbody></table>`
+      </tr>`}).join('')}</tbody></table></div>`
     : `<div class="p-10 text-center text-slate-400 text-sm">لا توجد نتائج مطابقة</div>`);
 }
 
@@ -1047,7 +1101,7 @@ function showModal(html, cls='w-full max-w-4xl'){
   document.getElementById('modal').classList.remove('hidden');
 }
 function closeModal(){ document.getElementById('modal').classList.add('hidden'); }
-const mHead = (t,s='') => `<div class="px-6 py-4 border-b border-slate-200 flex items-center justify-between shrink-0">
+const mHead = (t,s='') => `<div class="mhead px-6 py-4 border-b border-slate-200 flex items-center justify-between shrink-0 gap-3">
   <div><h3 class="font-extrabold text-brand-800 text-lg">${t}</h3>${s?`<div class="text-xs text-slate-400 mt-0.5">${s}</div>`:''}</div>
   <button onclick="closeModal()" class="w-9 h-9 rounded-xl hover:bg-slate-100 text-slate-400 text-xl leading-none">×</button></div>`;
 
@@ -1191,7 +1245,7 @@ function openOcr(k){
     <div class="text-xs text-slate-500">${i.lowConf?'<b class="text-red-600">حقلان بثقة حرجة يمنعان المتابعة حتى التصحيح</b>':'كل الحقول ضمن حدود الثقة المقبولة'}</div>
     <div class="flex gap-2">
       <button onclick="closeModal()" class="px-4 py-2.5 rounded-xl border border-slate-300 font-bold text-sm">حفظ كمسودة</button>
-      <button onclick="closeModal();openInvoice('${k}')" class="px-5 py-2.5 rounded-xl bg-brand-800 text-white font-bold text-sm">اعتماد الحقول وتشغيل التحقق ←</button>
+      <button onclick="confirmOcr('${k}')" class="px-5 py-2.5 rounded-xl bg-brand-800 text-white font-bold text-sm">اعتماد الحقول وتشغيل التحقق ←</button>
     </div>
   </div>`, 'w-full max-w-7xl h-[94vh]');
 }
@@ -1201,24 +1255,38 @@ let TAB = 'summary';
 function openInvoice(k, tab){
   TAB = tab||'summary';
   const i = findInv(k), s = subOf(i.sub), c = i.contract?conOf(i.contract):null;
-  const blocking = (i.flags||[]).filter(f=>FLAGS[f.t].sev==='blocking').length;
-  const tabs = [['summary','الملخص'],['lines','البنود'],['flags',`الملاحظات (${fmtNum((i.flags||[]).length)})`],['zatca','التحقق الضريبي'],['history','السجل']];
+  const blocking = blockingOpen(i), nOpen = openFlags(i).length, nAll = (i.flags||[]).length;
+  const tabs = [['summary','الملخص'],['lines','البنود'],['flags',`الملاحظات (${nOpen<nAll?fmtNum(nOpen)+' من '+fmtNum(nAll):fmtNum(nAll)})`],['zatca','التحقق الضريبي'],['history','السجل']];
+  const gate = i.status==='rejected'  ? ['text-slate-600','✕ الفاتورة مرفوضة — لا يمكن اعتمادها']
+             : i.status==='approved'  ? ['text-brand-800','✓ معتمدة للدفع']
+             : i.status==='paid'      ? ['text-blue-700','✓ مدفوعة']
+             : i.status==='archived'  ? ['text-slate-500','مؤرشفة — حفظ إلزامي ٦ سنوات']
+             : i.status==='ocr_review'? ['text-amber-700','بانتظار مراجعة الاستخراج — لم تُشغَّل محركات التحقق بعد']
+             : blocking ? ['text-red-600', `⛔ ${fmtNum(blocking)} ملاحظة حاجبة — الاعتماد للدفع محجوب حتى المعالجة`]
+             : ['text-emerald-600','✓ لا توجد ملاحظات حاجبة — جاهزة للاعتماد'];
+  const actionable = !FINAL.includes(i.status) && i.status!=='ocr_review';
 
   showModal(mHead(`${i.id} — ${s.name}`, `${c?c.id+' · '+c.title:'بدون عقد مرتبط'} · ${dtBoth(i.date)}`) + `
-  <div class="px-6 pt-3 border-b border-slate-200 flex gap-1 shrink-0">
+  <div class="tabs px-6 pt-3 border-b border-slate-200 flex gap-1 shrink-0">
     ${tabs.map(([t,l])=>`<button onclick="openInvoice('${k}','${t}')"
       class="tab px-4 py-2.5 text-sm border-b-2 ${TAB===t?'active':'border-transparent text-slate-500 hover:text-slate-700'}">${l}</button>`).join('')}
   </div>
-  <div class="flex-1 overflow-y-auto p-6">${invTab(i,s,c)}</div>
-  <div class="px-6 py-4 border-t border-slate-200 flex items-center justify-between shrink-0">
-    <div class="text-xs ${blocking?'text-red-600 font-bold':'text-emerald-600 font-bold'}">
-      ${blocking? `⛔ ${fmtNum(blocking)} ملاحظة حاجبة — الاعتماد للدفع محجوب حتى المعالجة` : '✓ لا توجد ملاحظات حاجبة'}
+  <div class="mbody flex-1 overflow-y-auto p-6">${invTab(i,s,c)}</div>
+  <div class="mfoot px-6 py-4 border-t border-slate-200 shrink-0">
+    <div id="reject-box" hidden class="mb-3 flex flex-wrap items-center gap-2">
+      <input type="text" placeholder="سبب رفض الفاتورة — إلزامي ويُحفظ في سجل التدقيق" class="border border-red-300 rounded-lg px-3 py-2 text-sm flex-1 min-w-[200px]">
+      <button onclick="rejectInvoice('${k}')" class="px-4 py-2 rounded-lg bg-red-600 text-white font-bold text-sm">تأكيد الرفض</button>
+      <span class="err text-[11px] text-red-600 font-bold"></span>
     </div>
-    <div class="flex gap-2">
-      <button onclick="closeModal()" class="px-4 py-2.5 rounded-xl border border-slate-300 font-bold text-sm">إغلاق</button>
-      <button data-role="admin,reviewer" class="px-4 py-2.5 rounded-xl border border-slate-300 font-bold text-sm">رفض الفاتورة</button>
-      <button data-role="admin,reviewer" ${blocking?'disabled':''}
-        class="px-5 py-2.5 rounded-xl font-bold text-sm ${blocking?'bg-slate-200 text-slate-400 cursor-not-allowed':'bg-brand-800 text-white'}">اعتماد للدفع</button>
+    <div class="flex items-center justify-between flex-wrap gap-2">
+      <div class="text-xs font-bold ${gate[0]}">${gate[1]}</div>
+      <div class="flex gap-2 flex-wrap">
+        <button onclick="closeModal()" class="px-4 py-2.5 rounded-xl border border-slate-300 font-bold text-sm">إغلاق</button>
+        ${i.status==='ocr_review'?`<button onclick="closeModal();openOcr('${k}')" data-role="admin,reviewer" class="px-5 py-2.5 rounded-xl bg-brand-800 text-white font-bold text-sm">مراجعة الاستخراج ←</button>`:''}
+        ${actionable?`<button onclick="showReject()" data-role="admin,reviewer" class="px-4 py-2.5 rounded-xl border border-slate-300 font-bold text-sm">رفض الفاتورة</button>
+        <button onclick="approveInvoice('${k}')" data-role="admin,reviewer" ${blocking?'disabled':''}
+          class="px-5 py-2.5 rounded-xl font-bold text-sm ${blocking?'bg-slate-200 text-slate-400 cursor-not-allowed':'bg-brand-800 text-white'}">اعتماد للدفع</button>`:''}
+      </div>
     </div>
   </div>`, 'w-full max-w-6xl h-[94vh]');
   document.querySelectorAll('[data-role]').forEach(el=>{
@@ -1263,7 +1331,7 @@ function invTab(i,s,c){
   }
 
   if(TAB==='lines'){
-    return `<table class="tbl w-full text-sm">
+    return `<div class="tbl-wrap"><table class="tbl w-full text-sm">
       <thead><tr><th>رمز البند</th><th>الوصف</th><th>الوحدة</th><th>الكمية</th><th>سعر الوحدة</th><th>سعر العقد</th><th>الفرق</th><th>الإجمالي</th><th>المطابقة</th><th></th></tr></thead>
       <tbody>${i.lines.map(l=>{
         const b = i.contract? boqItem(i.contract,l.code) : null;
@@ -1282,7 +1350,7 @@ function invTab(i,s,c){
           <td class="text-left">${b?`<button onclick="openPrice('${l.code}')" class="text-xs text-brand-700 font-bold hover:underline whitespace-nowrap">تاريخ السعر</button>`:''}</td>
         </tr>`}).join('')}</tbody>
       <tfoot><tr class="bg-slate-50 font-extrabold"><td colspan="7">مجموع البنود</td><td>${fmtMoney(i.lines.reduce((a,l)=>a+l.total,0))}</td><td colspan="2"></td></tr></tfoot>
-    </table>
+    </table></div>
     ${i.contract? `<div class="p-5"><h4 class="font-extrabold text-brand-800 mb-3">الكميات التراكمية مقابل العقد</h4>
       <div class="space-y-3">${i.lines.filter(l=>boqItem(i.contract,l.code)).map(l=>{
         const b = boqItem(i.contract,l.code);
@@ -1306,14 +1374,14 @@ function invTab(i,s,c){
       <div class="text-sm mt-1">اجتازت جميع فحوصات الالتزام الضريبي والتكرار وبنود جدول الكميات</div></div>`;
     return `<div class="space-y-3">${i.flags.map((f,ix)=>{
       const m = FLAGS[f.t];
-      return `<div class="border ${m.sev==='blocking'?'border-red-200':'border-amber-200'} rounded-2xl overflow-hidden">
-        <div class="${m.sev==='blocking'?'bg-red-50':'bg-amber-50'} px-4 py-3 flex items-center justify-between">
+      return `<div data-flag="${ix}" class="border ${m.sev==='blocking'?'border-red-200':'border-amber-200'} ${f.resolved?'flag-resolved':''} rounded-2xl overflow-hidden">
+        <div class="flag-head ${m.sev==='blocking'?'bg-red-50':'bg-amber-50'} px-4 py-3 flex items-center justify-between flex-wrap gap-2">
           <div class="flex items-center gap-2.5">
             ${sevPill(m.sev)}
             <span class="font-extrabold ${m.sev==='blocking'?'text-red-800':'text-amber-900'}">${m.ar}</span>
             ${f.line?`<span class="text-xs bg-white border border-slate-300 rounded px-2 py-0.5 font-bold">${f.line}</span>`:''}
           </div>
-          <span class="text-xs text-slate-500">${m.cat}</span>
+          <span class="text-xs text-slate-500">${f.resolved?'<b class="text-emerald-700">✓ تمت المعالجة</b> · ':''}${m.cat}</span>
         </div>
         <div class="p-4 text-sm">
           <p class="text-slate-700 leading-relaxed mb-3">${f.d}</p>
@@ -1331,7 +1399,11 @@ function invTab(i,s,c){
           </div>`:''}
           ${f.ref?`<button onclick="openDup('${invKey(i)}','${f.ref}')" class="text-xs font-bold text-brand-700 hover:underline mb-3">مقارنة بالفاتورة ${f.ref} ↗</button>`:''}
           ${f.t==='vat_unverified'?`<button onclick="openZatca('${invKey(i)}')" class="text-xs font-bold text-brand-700 hover:underline mb-3">فتح شاشة التحقق من المكلف ↗</button>`:''}
-          <div class="border-t border-slate-200 pt-3 mt-1" data-role="admin,reviewer">
+          ${f.resolved?`<div class="border-t border-slate-200 pt-3 mt-1 text-xs">
+            <div class="font-bold text-emerald-700 mb-1">✓ ${f.resolved.reason}</div>
+            <div class="text-slate-600">${f.resolved.note}</div>
+            <div class="text-slate-400 mt-1">${f.resolved.by} · <span dir="ltr">${f.resolved.at}</span> — مسجَّل في سجل التدقيق</div>
+          </div>`:`<div class="border-t border-slate-200 pt-3 mt-1" data-role="admin,reviewer">
             <div class="text-xs font-bold text-slate-600 mb-2">معالجة الملاحظة</div>
             <div class="flex flex-wrap gap-2 mb-2">
               <select class="border border-slate-300 rounded-lg px-3 py-2 text-xs flex-1 min-w-[200px]">
@@ -1343,14 +1415,15 @@ function invTab(i,s,c){
                 ${m.cat==='حسابية'?'<option>تم التصحيح بالاتفاق مع المورد</option><option>رفض — إعادة إصدار الفاتورة</option>':''}
                 ${m.cat==='بنود'?'<option>مطابقة يدوية ببند جدول الكميات</option><option>خارج نطاق العقد — رفض</option>':''}
               </select>
-              <input placeholder="ملاحظة إلزامية تُحفظ في سجل التدقيق" class="border border-slate-300 rounded-lg px-3 py-2 text-xs flex-1 min-w-[200px]">
+              <input type="text" placeholder="ملاحظة إلزامية تُحفظ في سجل التدقيق" class="border border-slate-300 rounded-lg px-3 py-2 text-xs flex-1 min-w-[200px]">
             </div>
-            <div class="flex gap-2">
-              <button class="text-xs font-bold bg-brand-800 text-white rounded-lg px-3.5 py-2">قبول المعالجة</button>
-              <button class="text-xs font-bold border border-slate-300 rounded-lg px-3.5 py-2">رفض الفاتورة</button>
-              <span class="text-[11px] text-slate-400 self-center">تُسجَّل هوية المعالِج ووقت المعالجة والسبب تلقائياً</span>
+            <div class="flex gap-2 flex-wrap items-center">
+              <button onclick="resolveFlag('${invKey(i)}',${ix},this)" class="text-xs font-bold bg-brand-800 text-white rounded-lg px-3.5 py-2">قبول المعالجة</button>
+              <button onclick="showReject()" class="text-xs font-bold border border-slate-300 rounded-lg px-3.5 py-2">رفض الفاتورة</button>
+              <span class="text-[11px] text-slate-400">تُسجَّل هوية المعالِج ووقت المعالجة والسبب تلقائياً</span>
             </div>
-          </div>
+            <div class="err text-[11px] text-red-600 font-bold mt-2"></div>
+          </div>`}
         </div>
       </div>`}).join('')}</div>`;
   }
@@ -1364,14 +1437,14 @@ function invTab(i,s,c){
       </div>
       <div class="border ${i.qr?'border-emerald-200 bg-emerald-50':'border-amber-200 bg-amber-50'} rounded-2xl p-4">
         <div class="font-extrabold ${i.qr?'text-emerald-800':'text-amber-900'} mb-2">٢) قراءة رمز QR ومطابقة الحقول (TLV)</div>
-        ${i.qr? `<table class="w-full text-xs bg-white rounded-xl overflow-hidden">
+        ${i.qr? `<div class="tbl-wrap"><table class="w-full text-xs bg-white rounded-xl overflow-hidden">
           <thead><tr class="bg-slate-100"><th class="p-2 text-right">الوسم</th><th class="p-2 text-right">الحقل</th><th class="p-2 text-right">قيمة الـ QR</th><th class="p-2 text-right">القيمة المستخرجة</th><th class="p-2">النتيجة</th></tr></thead>
           <tbody>${[['١','اسم البائع',subOf(i.sub).name,subOf(i.sub).name],['٢','الرقم الضريبي',i.vat,i.vat],
                     ['٣','ختم الوقت',i.date+'T09:14:00Z',i.date],['٤','الإجمالي شامل الضريبة',fmtNum(i.total),fmtNum(i.total)],
                     ['٥','إجمالي الضريبة',fmtNum(i.vatAmt),fmtNum(i.vatAmt)]].map(r=>`
             <tr class="border-t border-slate-100"><td class="p-2 font-bold">${r[0]}</td><td class="p-2">${r[1]}</td>
             <td class="p-2 text-slate-600">${r[2]}</td><td class="p-2 text-slate-600">${r[3]}</td>
-            <td class="p-2 text-center text-emerald-600 font-bold">✓</td></tr>`).join('')}</tbody></table>
+            <td class="p-2 text-center text-emerald-600 font-bold">✓</td></tr>`).join('')}</tbody></table></div>
           <div class="text-[11px] text-slate-500 mt-2">فك ترميز محلي بالكامل — لا تُرسل أي بيانات خارج النظام.</div>`
         : '<div class="text-sm text-slate-700">لم يُعثر على رمز QR على المستند — تعذّرت المطابقة الآلية، ويُعتمد التحقق اليدوي أدناه.</div>'}
       </div>
@@ -1380,14 +1453,19 @@ function invTab(i,s,c){
         <p class="text-sm text-slate-700 mb-3">افتح بوابة "الاستعلام عن مكلف"، ابحث بالرقم الضريبي، ثم سجّل النتيجة أدناه. تُحفظ هوية المُتحقِّق ووقت التحقق في سجل التدقيق.</p>
         <a href="https://zatca.gov.sa/ar/eServices/Pages/TaxpayerLookup.aspx" target="_blank" rel="noopener"
            class="inline-block bg-brand-800 text-white text-sm font-bold rounded-xl px-4 py-2.5 mb-4">فتح بوابة الاستعلام عن مكلف ↗</a>
-        <div class="bg-white rounded-xl p-4 space-y-3" data-role="admin,reviewer">
+        ${i.zatca?`<div class="bg-emerald-50 border border-emerald-200 rounded-xl p-4 text-sm">
+          <div class="font-extrabold text-emerald-800 mb-1">✓ تم التحقق من المكلف</div>
+          <div class="text-slate-700">الاسم النظامي في البوابة: <b>${i.zatca.name}</b></div>
+          <div class="text-xs text-slate-500 mt-1">${i.zatca.by} · <span dir="ltr">${i.zatca.at}</span> — مسجَّل في سجل التدقيق</div>
+        </div>`:`<div class="zbox bg-white rounded-xl p-4 space-y-3" data-role="admin,reviewer">
           <label class="flex items-center gap-2.5 text-sm font-semibold"><input type="checkbox" class="w-4 h-4"> الرقم الضريبي مسجّل ونشط لدى الهيئة</label>
           <div><div class="text-xs font-bold text-slate-600 mb-1">الاسم النظامي كما ظهر في البوابة</div>
-            <input class="w-full border border-slate-300 rounded-lg px-3 py-2 text-sm" placeholder="انسخ الاسم كما ظهر بالضبط"></div>
+            <input type="text" class="w-full border border-slate-300 rounded-lg px-3 py-2 text-sm" placeholder="انسخ الاسم كما ظهر بالضبط"></div>
           <div><div class="text-xs font-bold text-slate-600 mb-1">مرفق إثبات (اختياري)</div>
             <div class="border border-dashed border-slate-300 rounded-lg px-3 py-3 text-center text-xs text-slate-400">إرفاق لقطة شاشة من البوابة</div></div>
-          <button class="bg-brand-800 text-white text-sm font-bold rounded-xl px-4 py-2.5">تسجيل نتيجة التحقق</button>
-        </div>
+          <button onclick="attestZatca('${invKey(i)}',this)" class="bg-brand-800 text-white text-sm font-bold rounded-xl px-4 py-2.5">تسجيل نتيجة التحقق</button>
+          <div class="err text-[11px] text-red-600 font-bold"></div>
+        </div>`}
       </div>
       <div class="text-xs text-slate-400">لم تُفعَّل الواجهة البرمجية الرسمية للهيئة — محوّل الاستراتيجية جاهز في الكود ولا يُستدعى أي واجهة غير موثقة.</div>
     </div>`;
@@ -1399,7 +1477,9 @@ function invTab(i,s,c){
     ['استخراج البيانات','النظام', i.date, `المزوّد pdf-text · ثقة إجمالية ${Math.round(i.conf*100)}٪`],
     ['مراجعة بشرية للحقول', i.status==='ocr_review'?'—':'محمد الشمري', i.date, i.status==='ocr_review'?'بانتظار المراجعة':'اعتُمدت الحقول المستخرجة'],
     ['تشغيل محركات التحقق','النظام', i.date, `${fmtNum((i.flags||[]).length)} ملاحظة`],
-    ...(i.status==='approved'||i.status==='paid'||i.status==='archived'?[['الاعتماد للدفع','سارة الدوسري', i.date,'لا توجد ملاحظات حاجبة']]:[]),
+    ...((i.status==='approved'||i.status==='paid'||i.status==='archived') && !(i.events||[]).some(e=>e[0]==='الاعتماد للدفع')
+        ? [['الاعتماد للدفع','سارة الدوسري', i.date,'لا توجد ملاحظات حاجبة']] : []),
+    ...(i.events||[]),
     ...(i.status==='paid'||i.status==='archived'?[['تسجيل السداد','خالد العصيمي', i.date,'حوالة بنكية']]:[]),
     ...(i.status==='archived'?[['الأرشفة','النظام', i.date,'حفظ إلزامي ٦ سنوات — لا يمكن الحذف']]:[])
   ];
@@ -1409,11 +1489,78 @@ function invTab(i,s,c){
       <div class="absolute -right-8 top-1 w-6 h-6 rounded-full ${ix===steps.length-1?'bg-brand-800':'bg-white border-2 border-brand-300'} flex items-center justify-center">
         ${ix===steps.length-1?'<div class="w-2 h-2 bg-white rounded-full"></div>':''}</div>
       <div class="font-extrabold text-brand-800">${s2[0]}</div>
-      <div class="text-xs text-slate-400 mb-1">${s2[1]} · ${dtBoth(s2[2])}</div>
+      <div class="text-xs text-slate-400 mb-1">${s2[1]} · ${s2[2].length===10?dtBoth(s2[2]):`<span dir="ltr">${s2[2]}</span>`}</div>
       <div class="text-sm text-slate-600">${s2[3]}</div>
     </div>`).join('')}
     <p class="text-xs text-slate-400 mt-4">كل انتقال حالة يُسجَّل في <span dir="ltr">invoice_status_history</span> مع الفاعل والسبب والوقت، ويُنسخ إلى سجل التدقيق غير القابل للتعديل.</p>
   </div>`;
+}
+
+/* ── reviewer actions (in-memory; a page reload restores the demo data) ── */
+function showReject(){
+  const b=document.getElementById('reject-box'); if(!b) return;
+  b.hidden=!b.hidden; if(!b.hidden) b.querySelector('input').focus();
+}
+function resolveFlag(k, ix, el){
+  const i=findInv(k), f=i.flags[ix], card=el.closest('[data-flag]');
+  const sel=card.querySelector('select'), inp=card.querySelector('input[type=text]');
+  const reason = sel.selectedIndex>0 ? sel.value : '', note = inp.value.trim();
+  if(!reason||!note){ card.querySelector('.err').textContent='اختر سبب المعالجة واكتب ملاحظة — كلاهما إلزامي ويُحفظان في سجل التدقيق.'; return; }
+  f.resolved={by:ME.name, at:nowStr(), reason, note};
+  logAudit('معالجة ملاحظة', i.id, `${FLAGS[f.t].ar} — ${reason} — ${note}`);
+  addEvent(i,'معالجة ملاحظة',`${FLAGS[f.t].ar} · ${reason}`);
+  recomputeStatus(i);
+  toast(blockingOpen(i)?'تمت المعالجة — لا تزال هناك ملاحظات حاجبة':'تمت المعالجة — الفاتورة جاهزة للاعتماد');
+  openInvoice(k,'flags');
+}
+function rejectInvoice(k){
+  const i=findInv(k), box=document.getElementById('reject-box'), reason=box.querySelector('input').value.trim();
+  if(!reason){ box.querySelector('.err').textContent='سبب الرفض إلزامي'; return; }
+  i.status='rejected';
+  logAudit('رفض فاتورة', i.id, reason); addEvent(i,'رفض الفاتورة',reason);
+  toast('رُفضت الفاتورة وسُجِّل السبب في سجل التدقيق'); closeModal(); go(CURRENT);
+}
+function approveInvoice(k){
+  const i=findInv(k); if(blockingOpen(i)||FINAL.includes(i.status)) return;
+  i.status='approved';
+  logAudit('اعتماد للدفع', i.id, 'لا توجد ملاحظات حاجبة — اعتُمدت للصرف'); addEvent(i,'الاعتماد للدفع','لا توجد ملاحظات حاجبة');
+  toast('اعتُمدت الفاتورة للدفع'); closeModal(); go(CURRENT);
+}
+function attestZatca(k, el){
+  const i=findInv(k), box=el.closest('.zbox');
+  const chk=box.querySelector('input[type=checkbox]').checked, name=box.querySelector('input[type=text]').value.trim();
+  if(!chk||!name){ box.querySelector('.err').textContent='يجب تأكيد أن الرقم مسجّل لدى الهيئة وإدخال الاسم النظامي كما ظهر في البوابة.'; return; }
+  i.zatca={by:ME.name, at:nowStr(), name};
+  const f=(i.flags||[]).find(x=>x.t==='vat_unverified'&&!x.resolved);
+  if(f) f.resolved={by:ME.name, at:nowStr(), reason:'تم التحقق من المكلف لدى الهيئة', note:`الاسم في البوابة: ${name}`};
+  logAudit('تحقق من مكلف (ZATCA)', i.id, `الرقم ${i.vat} — الاسم في البوابة: ${name}`);
+  addEvent(i,'التحقق من المكلف لدى الهيئة',name);
+  recomputeStatus(i); toast('سُجِّلت نتيجة التحقق'); openInvoice(k,'zatca');
+}
+function decideDup(k, el){
+  const i=findInv(k), box=el.closest('.dupbox');
+  const notDup=box.querySelector('input[value=no]').checked, reason=box.querySelector('input[type=text]').value.trim();
+  if(!reason){ box.querySelector('.err').textContent='سبب القرار إلزامي'; return; }
+  if(notDup){
+    (i.flags||[]).filter(f=>FLAGS[f.t].cat==='تكرار'&&!f.resolved).forEach(f=>f.resolved={by:ME.name, at:nowStr(), reason:'ليست مكررة — فاتورة مستقلة', note:reason});
+    logAudit('قرار تكرار: ليست مكررة', i.id, reason); addEvent(i,'قرار التكرار — ليست مكررة',reason);
+    recomputeStatus(i); toast('سُجِّل القرار — أُغلقت ملاحظات التكرار'); openInvoice(k,'flags');
+  } else {
+    i.status='rejected';
+    logAudit('رفض فاتورة مكررة', i.id, reason); addEvent(i,'رفض — فاتورة مكررة',reason);
+    toast('رُفضت الفاتورة المكررة'); closeModal(); go(CURRENT);
+  }
+}
+function confirmOcr(k){
+  const i=findInv(k);
+  if(i.status==='ocr_review'){
+    i.lowConf=false; i.conf=Math.max(i.conf,0.9); i.lines.forEach(l=>l.conf=Math.max(l.conf,0.9));
+    logAudit('اعتماد الحقول المستخرجة', i.id, 'صُحِّحت الحقول منخفضة الثقة وشُغِّلت محركات التحقق');
+    addEvent(i,'اعتماد الحقول وتشغيل التحقق','اكتملت المراجعة البشرية');
+    i.status='validating'; recomputeStatus(i);
+    toast(i.status==='clean'?'اكتمل التحقق — لا توجد ملاحظات':'اكتمل التحقق — توجد ملاحظات تتطلب المعالجة');
+  }
+  closeModal(); openInvoice(k, openFlags(i).length?'flags':'summary');
 }
 
 /* ── duplicate comparison ───────────────────────────────────────────────── */
@@ -1430,7 +1577,7 @@ function openDup(k, refId){
       <div class="font-extrabold text-red-800 mb-1">درجة التطابق ١٠٠٪ — تطابق تام + بصمة ملف متطابقة</div>
       <div class="text-sm text-red-900">نفس الرقم الضريبي للمورد ونفس رقم الفاتورة، ونفس بصمة SHA-256 للملف المرفوع.</div>
     </div>
-    <table class="tbl w-full text-sm mb-5">
+    <div class="tbl-wrap"><table class="tbl w-full text-sm mb-5">
       <thead><tr><th>الحقل</th><th>الفاتورة قيد المراجعة</th><th>الفاتورة المسجلة</th><th>النتيجة</th></tr></thead>
       <tbody>
         ${row('رقم الفاتورة', a.id, b.id, true)}
@@ -1442,15 +1589,16 @@ function openDup(k, refId){
         ${row('تاريخ الفاتورة', dt(a.date), dt(b.date), false)}
         ${row('الحالة', STATUS[a.status].ar, STATUS[b.status].ar, false)}
       </tbody>
-    </table>
-    <div class="border border-slate-200 rounded-2xl p-4" data-role="admin,reviewer">
+    </table></div>
+    <div class="dupbox border border-slate-200 rounded-2xl p-4" data-role="admin,reviewer">
       <div class="font-bold text-sm mb-3">قرار المراجع</div>
       <div class="space-y-2 mb-3 text-sm">
-        <label class="flex items-center gap-2.5"><input type="radio" name="dup"> ليست مكررة — فاتورة مستقلة (يتطلب سبباً مكتوباً)</label>
-        <label class="flex items-center gap-2.5"><input type="radio" name="dup" checked> مكررة فعلاً — رفض الفاتورة ومنع الصرف</label>
+        <label class="flex items-center gap-2.5"><input type="radio" name="dup" value="no"> ليست مكررة — فاتورة مستقلة (يتطلب سبباً مكتوباً)</label>
+        <label class="flex items-center gap-2.5"><input type="radio" name="dup" value="yes" checked> مكررة فعلاً — رفض الفاتورة ومنع الصرف</label>
       </div>
-      <input placeholder="سبب القرار — إلزامي ويُحفظ في سجل التدقيق" class="w-full border border-slate-300 rounded-lg px-3 py-2 text-sm mb-3">
-      <button onclick="closeModal()" class="bg-brand-800 text-white text-sm font-bold rounded-xl px-4 py-2.5">حفظ القرار</button>
+      <input type="text" placeholder="سبب القرار — إلزامي ويُحفظ في سجل التدقيق" class="w-full border border-slate-300 rounded-lg px-3 py-2 text-sm mb-3">
+      <button onclick="decideDup('${k}',this)" class="bg-brand-800 text-white text-sm font-bold rounded-xl px-4 py-2.5">حفظ القرار</button>
+      <div class="err text-[11px] text-red-600 font-bold mt-2"></div>
     </div>
   </div>`, 'w-full max-w-3xl');
   document.querySelectorAll('[data-role]').forEach(el=>{el.style.display = el.dataset.role.split(',').includes(ME.role)?'':'none'});
@@ -1479,7 +1627,7 @@ function openPrice(code){
         <text x="${X(ix)}" y="${H-PAD+28}" font-size="8" fill="#94a3b8" text-anchor="middle">${x.d}</text>
       </g>`).join('')}
     </svg>
-    <table class="tbl w-full text-sm">
+    <div class="tbl-wrap"><table class="tbl w-full text-sm">
       <thead><tr><th>التاريخ</th><th>المصدر</th><th>سعر الوحدة</th><th>التغيّر</th></tr></thead>
       <tbody>${h.map((x,ix)=>{
         const d = ix? x.p-h[ix-1].p : 0;
@@ -1487,7 +1635,7 @@ function openPrice(code){
         <td class="font-bold">${fmtMoney(x.p)}</td>
         <td class="${d>0?'text-red-600 font-bold':d<0?'text-emerald-600 font-bold':'text-slate-400'}">${ix?(d?((d>0?'+':'')+fmtMoney(d)+' ('+(d>0?'+':'')+fmtPct(d/h[ix-1].p*100)+')'):'بدون تغيير'):'—'}</td></tr>`}).join('')}
       </tbody>
-    </table>
+    </table></div>
     <p class="text-xs text-slate-400 mt-3">يُبنى تاريخ السعر لكل بند لكل مقاول من سعر العقد عند الاستيراد ومن كل فاتورة معتمدة لاحقاً.</p>
   </div>`, 'w-full max-w-3xl');
 }
@@ -1511,7 +1659,7 @@ function openContract(id){
       <h4 class="font-extrabold text-brand-800">جدول الكميات (BoQ) — ${fmtNum(items.length)} بند</h4>
       <button onclick="openBoqImport()" data-role="admin" class="text-xs font-bold text-brand-700 border border-brand-200 bg-brand-50 rounded-lg px-3 py-1.5">استيراد / تحديث من Excel</button>
     </div>
-    <table class="tbl w-full text-sm">
+    <div class="tbl-wrap"><table class="tbl w-full text-sm">
       <thead><tr><th>الرمز</th><th>الوصف</th><th>الوحدة</th><th>الكمية التعاقدية</th><th>سعر الوحدة</th><th>القيمة</th><th>المفوتر</th><th>نسبة التنفيذ</th><th></th></tr></thead>
       <tbody>${items.map(b=>{
         const pct = b.invoicedQty/b.qty*100, over = pct>100;
@@ -1526,15 +1674,15 @@ function openContract(id){
             <div class="text-[11px] ${over?'text-red-600 font-bold':'text-slate-400'} mt-0.5">${fmtPct(pct)}</div></td>
           <td class="text-left">${PRICE_HISTORY[b.code]?`<button onclick="openPrice('${b.code}')" class="text-xs text-brand-700 font-bold hover:underline whitespace-nowrap">تاريخ السعر</button>`:''}</td>
         </tr>`}).join('')}</tbody>
-    </table>
+    </table></div>
     <h4 class="font-extrabold text-brand-800 mt-6 mb-3">فواتير هذا العقد</h4>
-    <table class="tbl w-full text-sm">
+    <div class="tbl-wrap"><table class="tbl w-full text-sm">
       <thead><tr><th>الفاتورة</th><th>التاريخ</th><th>الإجمالي</th><th>الحالة</th><th>ملاحظات</th></tr></thead>
       <tbody>${INVOICES.filter(i=>i.contract===id).map(i=>`<tr class="cursor-pointer" onclick="closeModal();openInvoice('${invKey(i)}')">
         <td class="font-bold text-brand-800">${i.id}</td><td class="whitespace-nowrap text-slate-500">${dt(i.date)}</td>
         <td class="font-semibold">${fmtMoney(i.total)}</td><td>${badge(i.status)}</td>
-        <td>${(i.flags||[]).length?`<span class="text-red-600 font-bold">${fmtNum(i.flags.length)}</span>`:'<span class="text-emerald-600">✓</span>'}</td></tr>`).join('')}</tbody>
-    </table>
+        <td>${openFlags(i).length?`<span class="text-red-600 font-bold">${fmtNum(openFlags(i).length)}</span>`:'<span class="text-emerald-600">✓</span>'}</td></tr>`).join('')}</tbody>
+    </table></div>
   </div>`, 'w-full max-w-6xl h-[94vh]');
   document.querySelectorAll('[data-role]').forEach(el=>{el.style.display = el.dataset.role.split(',').includes(ME.role)?'':'none'});
 }
@@ -1599,7 +1747,7 @@ function openBoqImport(step){
         <div class="flex-1 bg-amber-50 border border-amber-200 rounded-xl p-3 text-center"><div class="text-2xl font-extrabold text-amber-700">١</div><div class="text-xs text-amber-800">تحذير — وحدة غير معيارية</div></div>
         <div class="flex-1 bg-red-50 border border-red-200 rounded-xl p-3 text-center"><div class="text-2xl font-extrabold text-red-700">٠</div><div class="text-xs text-red-800">صف مرفوض</div></div>
       </div>
-      <table class="tbl w-full text-sm">
+      <div class="tbl-wrap"><table class="tbl w-full text-sm">
         <thead><tr><th>#</th><th>الرمز</th><th>الوصف</th><th>الوحدة</th><th>الكمية</th><th>سعر الوحدة</th><th>القيمة</th><th>الحالة</th></tr></thead>
         <tbody>${items.map((b,ix)=>`<tr>
           <td class="text-slate-400">${fmtNum(ix+1)}</td>
@@ -1610,7 +1758,7 @@ function openBoqImport(step){
           <td>${ix===2?'<span class="text-xs font-bold text-amber-700">تحذير: "م٢" ← تُطبَّع إلى م²</span>':'<span class="text-xs font-bold text-emerald-600">صالح ✓</span>'}</td>
         </tr>`).join('')}</tbody>
         <tfoot><tr class="bg-slate-50 font-extrabold"><td colspan="6">إجمالي قيمة جدول الكميات</td><td colspan="2">${fmtMoney(items.reduce((s,b)=>s+b.qty*b.price,0))}</td></tr></tfoot>
-      </table>
+      </table></div>
       <div class="bg-slate-50 rounded-xl p-3 text-xs text-slate-600 mt-4">
         عند التأكيد: تُنشأ بنود جدول الكميات ويُسجَّل سعر كل بند كنقطة بداية في تاريخ الأسعار، وتُكتب عملية الاستيراد في سجل التدقيق.
       </div>
