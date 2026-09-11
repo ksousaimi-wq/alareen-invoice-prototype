@@ -345,6 +345,8 @@ svg{display:block;vertical-align:middle}
   input,select,textarea{font-family:inherit}
   [hidden]{display:none!important}
   .span2{grid-column:1/-1}
+  #cdrop.drag{background:#d4e6e6;border-color:#215557}
+  .cdoc p{margin:0 0 .55rem;line-height:1.9}
   input[type=number]{-moz-appearance:textfield}
   .tbl-wrap{overflow-x:auto;-webkit-overflow-scrolling:touch}
   #menu-btn,#scrim{display:none}
@@ -1141,7 +1143,7 @@ function showModal(html, cls='w-full max-w-4xl'){
   box.innerHTML = html;
   document.getElementById('modal').classList.remove('hidden');
 }
-function closeModal(){ document.getElementById('modal').classList.add('hidden'); }
+function closeModal(){ document.getElementById('modal').classList.add('hidden'); clearTimeout(extractProgress._t); }
 const mHead = (t,s='') => `<div class="mhead px-6 py-4 border-b border-slate-200 flex items-center justify-between shrink-0 gap-3">
   <div><h3 class="font-extrabold text-brand-800 text-lg">${t}</h3>${s?`<div class="text-xs text-slate-400 mt-0.5">${s}</div>`:''}</div>
   <button onclick="closeModal()" class="w-9 h-9 rounded-xl hover:bg-slate-100 text-slate-400 text-xl leading-none">×</button></div>`;
@@ -1696,6 +1698,7 @@ function openContract(id){
          ['المدة',`${dt(c.start)}<br>${dt(c.end)}`]].map(([k2,v])=>
         `<div class="bg-slate-50 rounded-xl p-3"><div class="text-xs text-slate-500 mb-1">${k2}</div><div class="font-extrabold text-brand-800 text-sm">${v}</div></div>`).join('')}
     </div>
+    ${c.doc?`<div class="border border-slate-200 rounded-xl px-4 py-2.5 text-xs text-slate-600 mb-4 flex items-center gap-2 flex-wrap">📎 <b>مستند العقد:</b> ${c.doc.name} · ${fmtNum(c.doc.pages)} صفحة · استخراج آلي بثقة ${fmtPct(c.doc.overall*100)} · ${c.doc.changed?`عُدِّل ${fmtNum(c.doc.changed)} قيمة بعد الاستخراج`:'اعتُمدت القيم المستخرجة دون تعديل'} · ${c.doc.by}</div>`:''}
     <div class="flex items-center justify-between mb-3">
       <h4 class="font-extrabold text-brand-800">جدول الكميات (BoQ) — ${fmtNum(items.length)} بند</h4>
       <button onclick="openBoqImport(1,'${c.id}')" data-role="admin" class="text-xs font-bold text-brand-700 border border-brand-200 bg-brand-50 rounded-lg px-3 py-1.5">استيراد / تحديث من Excel</button>
@@ -1747,25 +1750,117 @@ const wizNav = (steps,n) => `<div class="wiz flex items-center gap-2 px-6 py-4 b
 /* — contract wizard — */
 let NEWC = {items:[]};
 const nextContractNo = () => { const y=new Date().getFullYear(), n=CONTRACTS.filter(c=>c.id.startsWith('C-'+y)).length+1; return `C-${y}-${String(n).padStart(3,'0')}`; };
-function openNewContract(){ NEWC = {items:[]}; contractStep(1); }
+function openNewContract(){ NEWC = {items:[]}; contractStep(0); }
+
+/* — document intake: drop the Arabic contract, the system extracts, the user reviews — */
+const EXTRACT_STEPS = ['تحميل المستند وحساب بصمته','التعرف على النص العربي (طبقة PDF ← Tesseract)','استخراج بيانات العقد والأطراف','اكتشاف جدول الكميات في الملاحق','مطابقة الطرف الثاني بسجل المقاولين'];
+function contractFile(file){
+  if(!file) return;
+  NEWC = {items:[], src:{name:file.name, size:file.size||0}};
+  extractProgress(0);
+}
+function extractProgress(i){
+  showModal(mHead('استخراج بيانات العقد', `${NEWC.src.name} · ${(NEWC.src.size/1048576).toFixed(1)} م.ب`) + `<div class="p-6 space-y-3">
+    ${EXTRACT_STEPS.map((t,ix)=>`<div class="flex items-center gap-3 text-sm">
+      <div class="w-7 h-7 rounded-full flex items-center justify-center text-xs font-extrabold shrink-0 ${ix<i?'bg-emerald-600 text-white':ix===i?'bg-gold-500 text-white':'bg-slate-200 text-slate-500'}">${ix<i?'✓':fmtNum(ix+1)}</div>
+      <span class="${ix<=i?'font-bold text-slate-800':'text-slate-400'}">${t}</span>${ix===i?'<span class="text-xs text-slate-400">جارٍ…</span>':''}</div>`).join('')}
+    <div class="h-2 bg-slate-100 rounded-full overflow-hidden mt-4"><div class="h-full bg-brand-700" style="width:${i/EXTRACT_STEPS.length*100}%;transition:width .4s"></div></div>
+    <div class="text-xs text-slate-400">الاستخراج محلي بالكامل — لا يغادر المستند بيئة النظام.</div></div>`, 'w-full max-w-lg');
+  clearTimeout(extractProgress._t);
+  extractProgress._t = setTimeout(()=>{ if(i<EXTRACT_STEPS.length) extractProgress(i+1); else { applyExtraction(); contractStep(1); } }, i<EXTRACT_STEPS.length?520:250);
+}
+/* what the extractor returns for the sample contract — every value carries a confidence,
+   and the raw extraction is kept so edits can be shown against it */
+function applyExtraction(){
+  const ex = {id:'C-2026-007', title:'أعمال التشطيبات الداخلية — الأبراج (أ) و(ب)', proj:'P-001', sub:'S-03', value:'3250000', signed:'2026-09-20', start:'2026-10-01', end:'2027-06-30', retention:'10', advance:'15'};
+  const conf = {id:.97, title:.93, proj:.90, sub:.90, value:.92, signed:.80, start:.88, end:.88, retention:.95, advance:.61};
+  const items = [
+    {code:'FN-001', ar:'أعمال بلاط بورسلين للأرضيات ٦٠×٦٠ سم', unit:'م²',  qty:'12000', price:'145',  conf:.96},
+    {code:'FN-002', ar:'دهانات داخلية ثلاث طبقات',            unit:'م²',  qty:'38000', price:'28.5', conf:.94},
+    {code:'FN-003', ar:'أسقف جبسية مستعارة',                   unit:'م²',  qty:'9500',  price:'85',   conf:.91},
+    {code:'FN-004', ar:'أبواب خشبية داخلية كاملة',              unit:'عدد', qty:'640',   price:'1850', conf:.72},
+    {code:'FN-005', ar:'رخام درج داخلي',                        unit:'م.ط', qty:'1200',  price:'320',  conf:.47},
+    {code:'FN-006', ar:'كسوة جدران حمامات سيراميك',             unit:'م²',  qty:'7400',  price:'98',   conf:.89}];
+  Object.assign(NEWC, ex, {items, conf, raw:{...ex, items:items.map(b=>({...b}))},
+    src:{...NEWC.src, pages:14, provider:'pdf-text + tesseract-ara', overall:.87, boqPages:'٤–٦'}});
+}
+/* the contract page as the extractor saw it — hover a field to locate it */
+function contractDoc(){
+  const n=NEWC, sub=subOf(n.sub), proj=projOf(n.proj);
+  return `<div class="doc-page cdoc rounded-lg p-7 mx-auto max-w-lg text-[13px] leading-loose">
+    <div class="text-center font-extrabold text-base mb-1">عقد مقاولة من الباطن</div>
+    <div class="text-center text-xs text-slate-500 mb-4">رقم العقد: <b data-f="id">${n.id}</b></div>
+    <p>إنه في يوم الأحد الموافق <b data-f="signed">${n.signed}</b> تم الاتفاق بين كل من:</p>
+    <p><b>الطرف الأول:</b> اتحاد العرين للمقاولات، سجل تجاري رقم 1010012345، ويمثلها في التوقيع على هذا العقد المدير العام.</p>
+    <p><b>الطرف الثاني:</b> <b data-f="sub">${sub.name}</b>، سجل تجاري رقم ${sub.cr}، ويمثلها مالكها.</p>
+    <p><b>المادة الأولى — موضوع العقد:</b> يتعهد الطرف الثاني بتنفيذ <b data-f="title">${n.title}</b> في مشروع <b data-f="proj">${proj.name} — ${proj.city}</b> وفق المواصفات والمخططات المعتمدة.</p>
+    <p><b>المادة الثانية — قيمة العقد:</b> <b data-f="value">${fmtNum(+n.value)} ريال سعودي</b> (ثلاثة ملايين ومائتان وخمسون ألف ريال) غير شاملة ضريبة القيمة المضافة، حسب جدول الكميات المرفق بالملحق (أ).</p>
+    <p><b>المادة الثالثة — مدة التنفيذ:</b> تبدأ الأعمال في <b data-f="start">${n.start}</b> وتُسلَّم في موعد أقصاه <b data-f="end">${n.end}</b>.</p>
+    <p><b>المادة الرابعة — المحتجز:</b> يُحتجز <b data-f="retention">${fmtNum(+n.retention)}٪</b> من قيمة كل مستخلص لحين التسليم النهائي.</p>
+    <p><b>المادة الخامسة — الدفعة المقدمة:</b> يصرف الطرف الأول للطرف الثاني دفعة مقدمة قدرها <b data-f="advance">خمسة عشر بالمائة</b> من قيمة العقد مقابل ضمان بنكي، تُستقطع من المستخلصات.</p>
+    <p class="text-xs text-slate-500">الملحق (أ): جدول الكميات والأسعار — الصفحات ${n.src.boqPages} · الملحق (ب): المواصفات الفنية.</p>
+    <div class="grid grid-cols-2 gap-6 mt-5 text-xs text-center"><div>الطرف الأول<br><span class="text-slate-400">التوقيع والختم</span></div><div>الطرف الثاني<br><span class="text-slate-400">التوقيع والختم</span></div></div>
+    <div class="text-[10px] text-slate-400 text-center mt-4">صفحة ١ من ${fmtNum(n.src.pages)}</div>
+  </div>`;
+}
+const cconf = k => NEWC.conf ? (NEWC.conf[k] ?? 1) : 1;
+const cinp  = k => `${INP} ${cconf(k)<.5?'border-red-400 bg-red-50':cconf(k)<.75?'border-amber-400 bg-amber-50':''}`;
+/* a form field that, in review mode, shows its confidence and lights up its source on hover */
+const fw = (k,label,inner,req=true) => !NEWC.conf ? F(label,inner,req) : `<div onmouseenter="hlDoc('${k}',1)" onmouseleave="hlDoc('${k}',0)">
+  <div class="flex items-center justify-between mb-1"><span class="text-xs font-bold text-slate-600">${label}${req?' <span class="text-red-500">*</span>':''}</span>${confBar(cconf(k))}</div>${inner}
+  ${cconf(k)<.5?'<div class="text-[11px] text-red-600 font-bold mt-1">ثقة حرجة — يجب التأكيد</div>':cconf(k)<.75?'<div class="text-[11px] text-amber-700 font-semibold mt-1">ثقة منخفضة — يُرجى التأكيد</div>':''}</div>`;
+function extractionChanges(){
+  if(!NEWC.raw) return 0;
+  let n=['id','title','proj','sub','value','signed','start','end','retention','advance'].filter(k=>String(NEWC[k]??'')!==String(NEWC.raw[k]??'')).length;
+  const key=b=>[b.code,b.ar,b.unit,b.qty,b.price].join('|');
+  NEWC.items.forEach((b,ix)=>{ if(!NEWC.raw.items[ix] || key(b)!==key(NEWC.raw.items[ix])) n++; });
+  if(NEWC.raw.items.length>NEWC.items.length) n+=NEWC.raw.items.length-NEWC.items.length;
+  return n;
+}
 function contractStep(n){
   const steps=[[1,'بيانات العقد'],[2,'جدول الكميات (BoQ)'],[3,'المراجعة والحفظ']];
   let body='';
-  if(n===1) body=`<form id="cform" class="p-6 grid grid-cols-1 sm:grid-cols-2 gap-4" onsubmit="event.preventDefault();contractCollect1()">
-    ${F('رقم العقد',`<input name="id" value="${NEWC.id||nextContractNo()}" class="${INP}" dir="ltr">`)}
-    ${F('عنوان العقد',`<input name="title" value="${NEWC.title||''}" placeholder="مثال: أعمال التشطيبات الداخلية" class="${INP}">`)}
-    ${F('المشروع',`<select name="proj" class="${INP}">${PROJECTS.map(p=>`<option value="${p.id}" ${NEWC.proj===p.id?'selected':''}>${p.id} — ${p.name}</option>`).join('')}</select>`)}
-    ${F('مقاول الباطن',`<select name="sub" class="${INP}">${SUBS.map(x=>`<option value="${x.id}" ${NEWC.sub===x.id?'selected':''}>${x.name}</option>`).join('')}</select>`)}
-    ${F('قيمة العقد (ر.س)',`<input name="value" type="number" min="1" step="0.01" value="${NEWC.value||''}" class="${INP}" dir="ltr">`)}
-    ${F('تاريخ التوقيع',`<input name="signed" type="date" value="${NEWC.signed||''}" class="${INP}" dir="ltr">`,false)}
-    ${F('تاريخ البداية',`<input name="start" type="date" value="${NEWC.start||''}" class="${INP}" dir="ltr">`)}
-    ${F('تاريخ النهاية',`<input name="end" type="date" value="${NEWC.end||''}" class="${INP}" dir="ltr">`)}
-    ${F('نسبة المحتجز ٪',`<input name="retention" type="number" min="0" max="100" step="0.5" value="${NEWC.retention??10}" class="${INP}" dir="ltr">`)}
-    ${F('نسبة الدفعة المقدمة ٪',`<input name="advance" type="number" min="0" max="100" step="0.5" value="${NEWC.advance??10}" class="${INP}" dir="ltr">`)}
+  if(n===0) body=`<div class="p-6">
+    <div class="grid grid-cols-1 lg:grid-cols-2 gap-4">
+      <div id="cdrop" class="border-2 border-dashed border-brand-300 bg-brand-50/50 rounded-2xl p-8 text-center cursor-pointer"
+           ondragover="event.preventDefault();this.classList.add('drag')" ondragleave="this.classList.remove('drag')"
+           ondrop="event.preventDefault();this.classList.remove('drag');contractFile(event.dataTransfer.files[0])" onclick="document.getElementById('cfile').click()">
+        <input id="cfile" type="file" accept=".pdf,.jpg,.jpeg,.png" hidden onchange="contractFile(this.files[0])">
+        <svg class="w-12 h-12 mx-auto text-brand-400 mb-3" fill="none" stroke="currentColor" stroke-width="1.6" viewBox="0 0 24 24"><path d="M12 16V4m0 0L8 8m4-4 4 4M4 16v2a2 2 0 002 2h12a2 2 0 002-2v-2"/></svg>
+        <div class="font-extrabold text-brand-800 text-lg mb-1">أسقط مستند العقد هنا</div>
+        <div class="text-sm text-slate-500 mb-4">PDF أو صورة ممسوحة لعقد عربي — يستخرج النظام بيانات العقد وجدول الكميات، ثم تراجعها وتعدّلها قبل الحفظ</div>
+        <span class="inline-block bg-brand-800 text-white text-sm font-bold rounded-xl px-4 py-2">اختيار ملف</span>
+        <div class="mt-3"><button type="button" onclick="event.stopPropagation();contractFile({name:'عقد_التشطيبات_الداخلية_موقّع.pdf',size:2418000})" class="text-xs text-brand-700 font-bold hover:underline">أو جرّب بمستند تجريبي ←</button></div>
+      </div>
+      <button onclick="NEWC={items:[]};contractStep(1)" class="border-2 border-dashed border-slate-300 rounded-2xl p-8 text-center hover:bg-slate-50">
+        <div class="text-3xl mb-2">✎</div><div class="font-extrabold text-slate-700 text-lg mb-1">إدخال يدوي</div>
+        <div class="text-sm text-slate-500">تعبئة بيانات العقد وجدول الكميات بدون مستند</div></button>
+    </div>
+    <div class="bg-slate-50 rounded-xl p-3 text-xs text-slate-600 mt-4 leading-relaxed">ما يحدث بعد الإسقاط: طبقة نص PDF ← Tesseract عربي للصفحات الممسوحة ← استخراج الحقول (رقم العقد، الأطراف، القيمة، المدد، المحتجز، الدفعة المقدمة) ← اكتشاف جدول الكميات في الملاحق ← مطابقة الطرف الثاني بسجل المقاولين. تُعرض كل قيمة مع درجة ثقتها، وتُحفظ القيمة الأصلية المستخرجة بجانب أي تعديل.</div>
+  </div>`;
+  if(n===1){
+    const form = `<form id="cform" class="grid grid-cols-1 sm:grid-cols-2 gap-4" onsubmit="event.preventDefault();contractCollect1()">
+    ${fw('id','رقم العقد',`<input name="id" value="${NEWC.id||nextContractNo()}" class="${cinp('id')}" dir="ltr">`)}
+    ${fw('title','عنوان العقد',`<input name="title" value="${NEWC.title||''}" placeholder="مثال: أعمال التشطيبات الداخلية" class="${cinp('title')}">`)}
+    ${fw('proj','المشروع',`<select name="proj" class="${cinp('proj')}">${PROJECTS.map(p=>`<option value="${p.id}" ${NEWC.proj===p.id?'selected':''}>${p.id} — ${p.name}</option>`).join('')}</select>`)}
+    ${fw('sub','مقاول الباطن (الطرف الثاني)',`<select name="sub" class="${cinp('sub')}">${SUBS.map(x=>`<option value="${x.id}" ${NEWC.sub===x.id?'selected':''}>${x.name}</option>`).join('')}</select>${NEWC.conf?`<div class="text-[11px] text-emerald-700 mt-1">✓ طُوبق اسم الطرف الثاني في المستند مع سجل المقاول ${NEWC.sub}</div>`:''}`)}
+    ${fw('value','قيمة العقد (ر.س)',`<input name="value" type="number" min="1" step="0.01" value="${NEWC.value||''}" class="${cinp('value')}" dir="ltr">`)}
+    ${fw('signed','تاريخ التوقيع',`<input name="signed" type="date" value="${NEWC.signed||''}" class="${cinp('signed')}" dir="ltr">`,false)}
+    ${fw('start','تاريخ البداية',`<input name="start" type="date" value="${NEWC.start||''}" class="${cinp('start')}" dir="ltr">`)}
+    ${fw('end','تاريخ النهاية',`<input name="end" type="date" value="${NEWC.end||''}" class="${cinp('end')}" dir="ltr">`)}
+    ${fw('retention','نسبة المحتجز ٪',`<input name="retention" type="number" min="0" max="100" step="0.5" value="${NEWC.retention??10}" class="${cinp('retention')}" dir="ltr">`)}
+    ${fw('advance','نسبة الدفعة المقدمة ٪',`<input name="advance" type="number" min="0" max="100" step="0.5" value="${NEWC.advance??10}" class="${cinp('advance')}" dir="ltr">`)}
     <div class="span2 err text-xs text-red-600 font-bold"></div>
-    ${formBtns('إلغاء','متابعة إلى جدول الكميات ←')}
+    ${formBtns('إلغاء','متابعة إلى جدول الكميات ←', NEWC.src?null:'contractStep(0)')}
   </form>`;
+    body = NEWC.src ? `<div class="grid grid-cols-1 lg:grid-cols-2">
+      <div class="bg-slate-200 p-5 border-l border-slate-300 overflow-y-auto" style="max-height:72vh">${contractDoc()}<div class="text-center text-xs text-slate-500 mt-3">مرّر المؤشر فوق أي حقل لتحديد موضعه في المستند</div></div>
+      <div class="p-6">
+        <div class="bg-amber-50 border border-amber-200 rounded-xl p-3 text-xs text-amber-900 mb-4 leading-relaxed">استُخرجت البيانات من <b>${NEWC.src.name}</b> — ${fmtNum(NEWC.src.pages)} صفحة · <span dir="ltr">${NEWC.src.provider}</span> · ثقة إجمالية ${fmtPct(NEWC.src.overall*100)}. راجع الحقول المظلّلة وعدّلها؛ تُحفظ القيمة الأصلية المستخرجة بجانب أي تعديل.</div>
+        ${form}</div></div>` : `<div class="p-6">${form}</div>`;
+  }
   if(n===2) body=`<div id="cform" class="p-6 space-y-4">
+    ${NEWC.src?`<div class="bg-amber-50 border border-amber-200 rounded-xl p-3 text-xs text-amber-900 leading-relaxed">اكتُشف جدول الكميات في الملحق (أ) — الصفحات ${NEWC.src.boqPages} — واستُخرج منه ${fmtNum(NEWC.items.length)} بند. الصفوف المظلّلة أقل ثقة (كمية أو وحدة غير واضحة في المسح) — راجعها قبل المتابعة.</div>`:''}
     <div class="grid grid-cols-1 sm:grid-cols-2 gap-3">
       <button onclick="boqCollect();openBoqImport(1,'${NEWC.id}')" class="border-2 border-dashed border-brand-300 bg-brand-50/50 rounded-2xl p-5 text-right hover:bg-brand-100">
         <div class="font-extrabold text-brand-800 mb-1">📊 استيراد من Excel</div><div class="text-xs text-slate-500">رفع ملف xlsx ومطابقة الأعمدة ومعاينة البنود قبل الحفظ</div></button>
@@ -1799,16 +1894,19 @@ function contractStep(n){
           ${total && Math.abs(total-(+NEWC.value))>1 ? `<div class="mt-3 text-xs ${total>+NEWC.value?'text-red-600':'text-amber-700'} font-bold">⚠ إجمالي البنود ${total>+NEWC.value?'يتجاوز':'أقل من'} قيمة العقد بمقدار ${fmtMoney(Math.abs(total-(+NEWC.value)))} — سيُسجَّل كملاحظة على العقد</div>`:''}
         </div>
       </div>
+      ${NEWC.src?`<div class="border border-brand-200 bg-brand-50 rounded-2xl p-4 text-sm flex items-center justify-between flex-wrap gap-3">
+        <div><div class="font-extrabold text-brand-800">📎 مصدر البيانات: ${NEWC.src.name}</div><div class="text-xs text-slate-600 mt-0.5">${fmtNum(NEWC.src.pages)} صفحة · استخراج آلي بثقة ${fmtPct(NEWC.src.overall*100)} · <b>${extractionChanges()?`عُدِّل ${fmtNum(extractionChanges())} من القيم المستخرجة`:'لم تُعدَّل أي قيمة مستخرجة'}</b></div></div>
+        <div class="text-xs text-slate-500">يُؤرشف المستند الأصلي مع العقد وتُحفظ القيم المستخرجة الخام بجانب القيم المعتمدة</div></div>`:''}
       <div class="bg-slate-50 rounded-xl p-3 text-xs text-slate-600">عند الحفظ: يُنشأ العقد وبنوده، ويُسجَّل سعر كل بند كنقطة بداية في تاريخ الأسعار، وتُكتب العملية في سجل التدقيق باسم ${ME.name}.</div>
       <div class="flex justify-between gap-2 flex-wrap">
         <button onclick="contractStep(2)" class="px-4 py-2.5 rounded-xl border border-slate-300 font-bold text-sm">→ رجوع</button>
         <button onclick="saveNewContract()" class="px-5 py-2.5 rounded-xl bg-brand-800 text-white font-bold text-sm">حفظ العقد</button></div>
     </div>`;
   }
-  showModal(mHead('عقد جديد', NEWC.id ? `${NEWC.id}${NEWC.title?' — '+NEWC.title:''}` : 'تسجيل عقد مقاول باطن مع جدول كمياته') + wizNav(steps,n) + `<div class="mbody flex-1 overflow-y-auto">${body}</div>`, 'w-full max-w-4xl max-h-[94vh]');
+  showModal(mHead('عقد جديد', n===0 ? 'أسقط مستند العقد ليستخرج النظام بياناته، أو أدخلها يدوياً' : NEWC.id ? `${NEWC.id}${NEWC.title?' — '+NEWC.title:''}` : 'تسجيل عقد مقاول باطن مع جدول كمياته') + (n===0?'':wizNav(steps,n)) + `<div class="mbody flex-1 overflow-y-auto">${body}</div>`, NEWC.src&&n===1 ? 'w-full max-w-7xl max-h-[94vh]' : 'w-full max-w-4xl max-h-[94vh]');
 }
-const boqRow = (b,ix) => `<tr>
-  <td><input value="${b.code||''}" data-k="code" placeholder="CN-006" class="${INP}" dir="ltr" style="min-width:6rem"></td>
+const boqRow = (b,ix) => `<tr class="${b.conf===undefined?'':b.conf<.5?'bg-red-50':b.conf<.75?'bg-amber-50':''}">
+  <td><input value="${b.code||''}" data-k="code" placeholder="CN-006" class="${INP}" dir="ltr" style="min-width:6rem">${b.conf!==undefined?`<div class="mt-1">${confBar(b.conf)}</div>`:''}</td>
   <td><input value="${b.ar||''}" data-k="ar" placeholder="وصف البند" class="${INP}" style="min-width:14rem"></td>
   <td><input value="${b.unit||''}" data-k="unit" placeholder="م³" class="${INP}" style="min-width:4rem"></td>
   <td><input value="${b.qty||''}" data-k="qty" type="number" min="0" step="0.001" oninput="boqLive(this)" class="${INP}" dir="ltr" style="min-width:6rem"></td>
@@ -1823,7 +1921,7 @@ function boqLive(el){
 }
 function boqCollect(){
   const rows=[...document.querySelectorAll('#boq-rows tr')].filter(r=>r.querySelector('[data-k]'));
-  NEWC.items = rows.map(r=>{ const o={}; r.querySelectorAll('[data-k]').forEach(e=>o[e.dataset.k]=e.value.trim()); return o; });
+  NEWC.items = rows.map((r,ix)=>{ const o={}; if(NEWC.items[ix]&&NEWC.items[ix].conf!==undefined) o.conf=NEWC.items[ix].conf; r.querySelectorAll('[data-k]').forEach(e=>o[e.dataset.k]=e.value.trim()); return o; });
 }
 function addBoqRow(){ boqCollect(); NEWC.items.push({code:'',ar:'',unit:'',qty:'',price:''}); contractStep(2); setTimeout(()=>{const r=document.querySelectorAll('#boq-rows tr'); r[r.length-1]?.querySelector('input')?.focus();},0); }
 function delBoqRow(ix){ boqCollect(); NEWC.items.splice(ix,1); contractStep(2); }
@@ -1843,11 +1941,12 @@ function contractCollect2(){
   contractStep(3);
 }
 function saveNewContract(){
-  const c={id:NEWC.id, proj:NEWC.proj, sub:NEWC.sub, title:NEWC.title, value:+NEWC.value, start:NEWC.start, end:NEWC.end, retention:+NEWC.retention, advance:+NEWC.advance, signed:NEWC.signed||null, status:'ساري'};
+  const c={id:NEWC.id, proj:NEWC.proj, sub:NEWC.sub, title:NEWC.title, value:+NEWC.value, start:NEWC.start, end:NEWC.end, retention:+NEWC.retention, advance:+NEWC.advance, signed:NEWC.signed||null, status:'ساري',
+    doc: NEWC.src ? {name:NEWC.src.name, pages:NEWC.src.pages, provider:NEWC.src.provider, overall:NEWC.src.overall, changed:extractionChanges(), by:ME.name, at:nowStr()} : null};
   CONTRACTS.push(c);
   BOQ[c.id] = NEWC.items.map(b=>({code:b.code.toUpperCase(), ar:b.ar, en:b.en||'', unit:b.unit, qty:+b.qty, price:+b.price, invoicedQty:0}));
   BOQ[c.id].forEach(b=>{ PRICE_HISTORY[b.code] = PRICE_HISTORY[b.code]||[{d:c.start,p:b.price,src:'العقد'}]; });
-  logAudit('إنشاء عقد', c.id, `${c.title} — ${subOf(c.sub).name} — ${fmtMoney(c.value)} — ${fmtNum(BOQ[c.id].length)} بند`);
+  logAudit('إنشاء عقد', c.id, `${c.title} — ${subOf(c.sub).name} — ${fmtMoney(c.value)} — ${fmtNum(BOQ[c.id].length)} بند${c.doc?` — من المستند ${c.doc.name} (استخراج آلي ${fmtPct(c.doc.overall*100)}، ${c.doc.changed?`عُدِّل ${fmtNum(c.doc.changed)} قيمة`:'بدون تعديل'})`:''}`);
   toast(`تم إنشاء العقد ${c.id}`); NEWC={items:[]}; closeModal(); go('contracts'); openContract(c.id);
 }
 
