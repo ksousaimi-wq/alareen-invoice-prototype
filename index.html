@@ -1803,6 +1803,10 @@ function contractDoc(){
     <div class="text-[10px] text-slate-400 text-center mt-4">صفحة ١ من ${fmtNum(n.src.pages)}</div>
   </div>`;
 }
+const fwc = (cm,k,label,inner,req=true) => !cm ? F(label,inner,req) : `<div onmouseenter="hlDoc('${k}',1)" onmouseleave="hlDoc('${k}',0)">
+  <div class="flex items-center justify-between mb-1"><span class="text-xs font-bold text-slate-600">${label}${req?' <span class="text-red-500">*</span>':''}</span>${confBar(cm[k]??1)}</div>${inner}
+  ${(cm[k]??1)<.5?'<div class="text-[11px] text-red-600 font-bold mt-1">ثقة حرجة — يجب التأكيد</div>':(cm[k]??1)<.75?'<div class="text-[11px] text-amber-700 font-semibold mt-1">ثقة منخفضة — يُرجى التأكيد</div>':''}</div>`;
+const cinpc = (cm,k) => `${INP} ${!cm?'':(cm[k]??1)<.5?'border-red-400 bg-red-50':(cm[k]??1)<.75?'border-amber-400 bg-amber-50':''}`;
 const cconf = k => NEWC.conf ? (NEWC.conf[k] ?? 1) : 1;
 const cinp  = k => `${INP} ${cconf(k)<.5?'border-red-400 bg-red-50':cconf(k)<.75?'border-amber-400 bg-amber-50':''}`;
 /* a form field that, in review mode, shows its confidence and lights up its source on hover */
@@ -2227,6 +2231,7 @@ function prTab(pr){
     <div class="tbl-wrap"><table class="tbl w-full text-sm"><thead><tr><th>#</th><th>البند</th><th>المواصفات</th><th>الوحدة</th><th>الكمية</th><th>سعر تقديري</th><th>الإجمالي التقديري</th></tr></thead>
       <tbody>${pr.lines.map((l,ix)=>`<tr><td class="text-slate-400">${fmtNum(ix+1)}</td><td class="font-semibold">${l.item}</td><td class="text-xs text-slate-500">${l.spec}</td><td>${l.unit}</td><td>${fmtNum(l.qty)}</td><td>${fmtNum(l.est)}</td><td class="font-semibold whitespace-nowrap">${fmtMoney(l.qty*l.est)}</td></tr>`).join('')}</tbody>
       <tfoot><tr class="bg-slate-50 font-extrabold"><td colspan="6">الإجمالي التقديري (قبل الضريبة)</td><td>${fmtMoney(prEst(pr))}</td></tr></tfoot></table></div>
+    ${pr.doc?`<div class="border border-slate-200 rounded-xl px-4 py-2.5 text-xs text-slate-600 mt-4 flex items-center gap-2 flex-wrap">📎 <b>مستند الطلب:</b> ${pr.doc.name} · ${fmtNum(pr.doc.pages)} صفحة · مرجع الموقع ${pr.doc.ref} · استخراج آلي بثقة ${fmtPct(pr.doc.overall*100)} · ${pr.doc.changed?`عُدِّل ${fmtNum(pr.doc.changed)} قيمة بعد الاستخراج`:'اعتُمدت القيم المستخرجة دون تعديل'} · ${pr.doc.by}</div>`:''}
     ${st==='pr_approval' && isAdmin ? `<div class="mt-4 flex gap-2 flex-wrap"><button onclick="approvePR('${id}')" class="px-5 py-2.5 rounded-xl bg-brand-800 text-white font-bold text-sm">اعتماد الطلب</button><button onclick="returnPR('${id}')" class="px-4 py-2.5 rounded-xl border border-slate-300 font-bold text-sm">إعادة للتعديل</button></div>`:''}
     ${st==='pr_approval' && !isAdmin ? '<div class="mt-4 text-xs text-amber-700 font-bold">بانتظار اعتماد مدير المشتريات</div>':''}`;
 
@@ -2426,45 +2431,123 @@ function openPO(id){
 /* ── new PR ── */
 let NEWPR={lines:[]};
 const nextPRNo = () => { const y=new Date().getFullYear(), n=PRS.filter(p=>p.id.startsWith('PR-'+y)).length+27; return `PR-${y}-${String(n).padStart(3,'0')}`; };
-function openNewPR(){ NEWPR={lines:[{item:'',spec:'',unit:'',qty:'',est:''}]}; renderNewPR(); }
-function renderNewPR(){
-  showModal(mHead('طلب شراء جديد', `${nextPRNo()} · يُرفع لاعتماد مدير المشتريات ثم يُطرح لعروض الأسعار`) + `
-  <div id="prform" class="mbody flex-1 overflow-y-auto p-6 space-y-4">
+function openNewPR(){ NEWPR={lines:[]}; renderNewPR(0); }
+const PR_EXTRACT_STEPS = ['تحميل المستند وحساب بصمته','التعرف على النص العربي (طبقة PDF ← Tesseract)','استخراج بيانات الطلب (الموضوع، الإدارة، تاريخ الحاجة، المبرر)','اكتشاف جدول البنود والكميات','مطابقة المشروع والوحدات بسجلات النظام وجلب آخر أسعار الشراء'];
+function prFile(file){ if(!file) return; NEWPR={lines:[], src:{name:file.name, size:file.size||0}}; prExtractProgress(0); }
+function prExtractProgress(i){
+  showModal(mHead('استخراج بيانات طلب الشراء', `${NEWPR.src.name} · ${(NEWPR.src.size/1048576).toFixed(1)} م.ب`) + `<div class="p-6 space-y-3">
+    ${PR_EXTRACT_STEPS.map((t,ix)=>`<div class="flex items-center gap-3 text-sm">
+      <div class="w-7 h-7 rounded-full flex items-center justify-center text-xs font-extrabold shrink-0 ${ix<i?'bg-emerald-600 text-white':ix===i?'bg-gold-500 text-white':'bg-slate-200 text-slate-500'}">${ix<i?'✓':fmtNum(ix+1)}</div>
+      <span class="${ix<=i?'font-bold text-slate-800':'text-slate-400'}">${t}</span>${ix===i?'<span class="text-xs text-slate-400">جارٍ…</span>':''}</div>`).join('')}
+    <div class="h-2 bg-slate-100 rounded-full overflow-hidden mt-4"><div class="h-full bg-brand-700" style="width:${i/PR_EXTRACT_STEPS.length*100}%;transition:width .4s"></div></div>
+    <div class="text-xs text-slate-400">الاستخراج محلي بالكامل — لا يغادر المستند بيئة النظام.</div></div>`, 'w-full max-w-lg');
+  clearTimeout(extractProgress._t);
+  extractProgress._t = setTimeout(()=>{ if(i<PR_EXTRACT_STEPS.length) prExtractProgress(i+1); else { applyPRExtraction(); renderNewPR(1); } }, i<PR_EXTRACT_STEPS.length?520:250);
+}
+/* what the extractor returns for the sample site requisition — the estimated prices are not on
+   the form; they come from the last purchase orders for the same items */
+function applyPRExtraction(){
+  const ex = {title:'توريد مواد صرف صحي — الدور الأرضي (المبنى ب)', proj:'P-002', dept:'الأعمال الصحية', need:'2026-11-10',
+              just:'استكمال شبكة الصرف الصحي للدور الأرضي قبل صبّ الأرضيات حسب البرنامج الزمني — مرجع طلب الموقع MR-0231.'};
+  const conf = {title:.93, proj:.88, dept:.90, need:.80, just:.85};
+  const lines = [
+    {item:'ماسورة UPVC قطر ١١٠ مم',        spec:'SASO 1023 · ٦ م',       unit:'م.ط', qty:'2400', est:'38',  conf:.95, estSrc:'آخر أمر شراء PO-2026-004'},
+    {item:'ماسورة UPVC قطر ٧٥ مم',         spec:'SASO 1023 · ٦ م',       unit:'م.ط', qty:'1800', est:'26',  conf:.92, estSrc:'آخر أمر شراء PO-2026-004'},
+    {item:'أكواع ووصلات ٤٥° و٩٠°',          spec:'UPVC',                  unit:'عدد', qty:'600',  est:'14',  conf:.71, estSrc:'متوسط عروض سابقة'},
+    {item:'غرف تفتيش خرسانية ٦٠×٦٠ سم',    spec:'مع غطاء حديد زهر',      unit:'عدد', qty:'24',   est:'850', conf:.90, estSrc:'آخر أمر شراء PO-2026-004'},
+    {item:'مواد لحام ولصق UPVC',            spec:'—',                     unit:'لتر', qty:'120',  est:'45',  conf:.44, estSrc:'تقدير — لا يوجد شراء سابق'}];
+  Object.assign(NEWPR, ex, {lines, conf, raw:{...ex, lines:lines.map(l=>({...l}))}, src:{...NEWPR.src, pages:2, provider:'tesseract-ara (مسح ضوئي)', overall:.84, ref:'MR-0231'}});
+}
+function prExtractionChanges(){
+  if(!NEWPR.raw) return 0;
+  let n=['title','proj','dept','need','just'].filter(k=>String(NEWPR[k]??'')!==String(NEWPR.raw[k]??'')).length;
+  const key=l=>[l.item,l.spec,l.unit,l.qty,l.est].join('|');
+  NEWPR.lines.forEach((l,ix)=>{ if(!NEWPR.raw.lines[ix] || key(l)!==key(NEWPR.raw.lines[ix])) n++; });
+  if(NEWPR.raw.lines.length>NEWPR.lines.length) n+=NEWPR.raw.lines.length-NEWPR.lines.length;
+  return n;
+}
+/* the site material requisition as the extractor saw it */
+function prDoc(){
+  const n=NEWPR, proj=projOf(n.proj);
+  return `<div class="doc-page cdoc rounded-lg p-7 mx-auto max-w-lg text-[13px] leading-loose">
+    <div class="flex justify-between items-start border-b-2 border-slate-800 pb-2 mb-3"><div><div class="font-extrabold">اتحاد العرين للمقاولات</div><div class="text-[11px] text-slate-500">إدارة المشاريع — نموذج طلب مواد من الموقع</div></div>
+      <div class="text-left"><div class="font-extrabold">طلب مواد</div><div class="text-[11px] text-slate-500">MATERIAL REQUISITION</div><div class="text-xs font-bold mt-1" data-f="ref">${n.src.ref}</div></div></div>
+    <p>المشروع: <b data-f="proj">${proj.name} — ${proj.city}</b> · القسم: <b data-f="dept">${n.dept}</b></p>
+    <p>تاريخ الطلب: <b>2026-09-08</b> · تاريخ الحاجة للمواد بالموقع: <b data-f="need">${n.need}</b></p>
+    <p>الموضوع: <b data-f="title">${n.title}</b></p>
+    <p>المبرر / الاستخدام: <span data-f="just">${n.just}</span></p>
+    <table class="w-full text-[11px] border border-slate-300 my-3" data-f="lines"><thead><tr class="bg-slate-100"><th class="border border-slate-300 p-1">م</th><th class="border border-slate-300 p-1 text-right">البند</th><th class="border border-slate-300 p-1 text-right">المواصفة</th><th class="border border-slate-300 p-1">الوحدة</th><th class="border border-slate-300 p-1">الكمية</th></tr></thead>
+      <tbody>${n.raw.lines.map((l,ix)=>`<tr><td class="border border-slate-300 p-1 text-center">${fmtNum(ix+1)}</td><td class="border border-slate-300 p-1">${l.item}</td><td class="border border-slate-300 p-1">${l.spec}</td><td class="border border-slate-300 p-1 text-center ${l.conf<.75?'text-slate-400':''}">${l.conf<.75?l.unit+' (؟)':l.unit}</td><td class="border border-slate-300 p-1 text-center ${l.conf<.5?'text-slate-400 line-through':''}">${l.conf<.5?'١٢٠ / ١٢٠٠ (غير واضح)':fmtNum(+l.qty)}</td></tr>`).join('')}</tbody></table>
+    <p class="text-[11px] text-slate-500">ملاحظة: الأسعار غير مدرجة في هذا النموذج — تُجلب من آخر أوامر الشراء المماثلة.</p>
+    <div class="grid grid-cols-3 gap-4 mt-4 text-xs text-center"><div>مهندس الموقع<br><span class="text-slate-400">م. ياسر الحربي ✓</span></div><div>مدير المشروع<br><span class="text-slate-400">التوقيع ✓</span></div><div>المستودع<br><span class="text-slate-400">غير متوفر بالمخزون ✓</span></div></div>
+    <div class="text-[10px] text-slate-400 text-center mt-4">صفحة ١ من ${fmtNum(n.src.pages)} — مسح ضوئي</div>
+  </div>`;
+}
+function renderNewPR(step){
+  if(step===0){
+    showModal(mHead('طلب شراء جديد','أسقط طلب المواد من الموقع ليستخرج النظام بياناته، أو أدخل الطلب يدوياً') + `<div class="mbody flex-1 overflow-y-auto p-6">
+      <div class="grid grid-cols-1 lg:grid-cols-2 gap-4">
+        <div id="cdrop" class="border-2 border-dashed border-brand-300 bg-brand-50/50 rounded-2xl p-8 text-center cursor-pointer"
+             ondragover="event.preventDefault();this.classList.add('drag')" ondragleave="this.classList.remove('drag')"
+             ondrop="event.preventDefault();this.classList.remove('drag');prFile(event.dataTransfer.files[0])" onclick="document.getElementById('prfile').click()">
+          <input id="prfile" type="file" accept=".pdf,.jpg,.jpeg,.png" hidden onchange="prFile(this.files[0])">
+          <svg class="w-12 h-12 mx-auto text-brand-400 mb-3" fill="none" stroke="currentColor" stroke-width="1.6" viewBox="0 0 24 24"><path d="M12 16V4m0 0L8 8m4-4 4 4M4 16v2a2 2 0 002 2h12a2 2 0 002-2v-2"/></svg>
+          <div class="font-extrabold text-brand-800 text-lg mb-1">أسقط طلب المواد هنا</div>
+          <div class="text-sm text-slate-500 mb-4">نموذج طلب مواد من الموقع أو مذكرة طلب — PDF أو صورة ممسوحة بالعربية · يستخرج النظام الموضوع والمشروع والبنود والكميات ويجلب آخر أسعار الشراء</div>
+          <span class="inline-block bg-brand-800 text-white text-sm font-bold rounded-xl px-4 py-2">اختيار ملف</span>
+          <div class="mt-3"><button type="button" onclick="event.stopPropagation();prFile({name:'طلب_مواد_MR-0231_الموقع.pdf',size:1310000})" class="text-xs text-brand-700 font-bold hover:underline">أو جرّب بمستند تجريبي ←</button></div>
+        </div>
+        <button onclick="NEWPR={lines:[{item:'',spec:'',unit:'',qty:'',est:''}]};renderNewPR(1)" class="border-2 border-dashed border-slate-300 rounded-2xl p-8 text-center hover:bg-slate-50">
+          <div class="text-3xl mb-2">✎</div><div class="font-extrabold text-slate-700 text-lg mb-1">إدخال يدوي</div>
+          <div class="text-sm text-slate-500">تعبئة الطلب وبنوده بدون مستند</div></button>
+      </div>
+      <div class="bg-slate-50 rounded-xl p-3 text-xs text-slate-600 mt-4 leading-relaxed">ما يحدث بعد الإسقاط: التعرف على النص العربي ← استخراج الموضوع والمشروع والإدارة وتاريخ الحاجة والمبرر ← اكتشاف جدول البنود والكميات ← جلب آخر سعر شراء لكل بند كسعر تقديري. تُعرض كل قيمة مع درجة ثقتها وتُحفظ القيمة الأصلية بجانب أي تعديل.</div>
+    </div>`, 'w-full max-w-4xl max-h-[94vh]');
+    return;
+  }
+  const cm = NEWPR.conf, src = NEWPR.src;
+  const form = `<div id="prform" class="space-y-4">
     <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
-      ${F('موضوع الطلب',`<input name="title" value="${NEWPR.title||''}" placeholder="مثال: توريد مواسير صرف صحي" class="${INP}">`)}
-      ${F('المشروع',`<select name="proj" class="${INP}">${PROJECTS.map(p=>`<option value="${p.id}" ${NEWPR.proj===p.id?'selected':''}>${p.id} — ${p.name}</option>`).join('')}</select>`)}
-      ${F('الإدارة الطالبة',`<input name="dept" value="${NEWPR.dept||''}" placeholder="الإنشاءات / الكهرباء / الميكانيكا…" class="${INP}">`)}
-      ${F('تاريخ الحاجة',`<input type="date" name="need" value="${NEWPR.need||''}" class="${INP}" dir="ltr">`)}
-      <div class="span2">${F('المبرر',`<textarea name="just" rows="2" class="${INP}">${NEWPR.just||''}</textarea>`)}</div>
+      ${fwc(cm,'title','موضوع الطلب',`<input name="title" value="${NEWPR.title||''}" placeholder="مثال: توريد مواسير صرف صحي" class="${cinpc(cm,'title')}">`)}
+      ${fwc(cm,'proj','المشروع',`<select name="proj" class="${cinpc(cm,'proj')}">${PROJECTS.map(p=>`<option value="${p.id}" ${NEWPR.proj===p.id?'selected':''}>${p.id} — ${p.name}</option>`).join('')}</select>${cm?`<div class="text-[11px] text-emerald-700 mt-1">✓ طُوبق اسم المشروع في المستند مع ${NEWPR.proj}</div>`:''}`)}
+      ${fwc(cm,'dept','الإدارة الطالبة',`<input name="dept" value="${NEWPR.dept||''}" placeholder="الإنشاءات / الكهرباء / الميكانيكا…" class="${cinpc(cm,'dept')}">`)}
+      ${fwc(cm,'need','تاريخ الحاجة',`<input type="date" name="need" value="${NEWPR.need||''}" class="${cinpc(cm,'need')}" dir="ltr">`)}
+      <div class="span2">${fwc(cm,'just','المبرر',`<textarea name="just" rows="2" class="${cinpc(cm,'just')}">${NEWPR.just||''}</textarea>`)}</div>
     </div>
-    <div class="flex items-center justify-between"><div class="text-xs font-bold text-slate-600">بنود الطلب <span class="text-red-500">*</span></div><button onclick="prAddRow()" class="text-xs font-bold text-brand-700 border border-brand-200 bg-brand-50 rounded-lg px-3 py-1.5">+ إضافة بند</button></div>
+    <div class="flex items-center justify-between" onmouseenter="hlDoc('lines',1)" onmouseleave="hlDoc('lines',0)"><div class="text-xs font-bold text-slate-600">بنود الطلب <span class="text-red-500">*</span>${cm?' <span class="font-normal text-slate-400">— الصفوف المظلّلة أقل ثقة؛ الأسعار التقديرية من آخر أوامر الشراء</span>':''}</div><button onclick="prAddRow()" class="text-xs font-bold text-brand-700 border border-brand-200 bg-brand-50 rounded-lg px-3 py-1.5">+ إضافة بند</button></div>
     <div class="tbl-wrap"><table class="tbl w-full text-sm"><thead><tr><th>البند</th><th>المواصفات</th><th>الوحدة</th><th>الكمية</th><th>سعر تقديري</th><th>الإجمالي</th><th></th></tr></thead>
-      <tbody id="pr-rows">${NEWPR.lines.map((l,ix)=>`<tr>
-        <td><input value="${l.item}" data-k="item" placeholder="اسم البند" class="${INP}" style="min-width:12rem"></td>
+      <tbody id="pr-rows">${NEWPR.lines.map((l,ix)=>`<tr class="${l.conf===undefined?'':l.conf<.5?'bg-red-50':l.conf<.75?'bg-amber-50':''}">
+        <td><input value="${l.item}" data-k="item" placeholder="اسم البند" class="${INP}" style="min-width:12rem">${l.conf!==undefined?`<div class="mt-1">${confBar(l.conf)}</div>`:''}</td>
         <td><input value="${l.spec}" data-k="spec" placeholder="المواصفة / المعيار" class="${INP}" style="min-width:12rem"></td>
         <td><input value="${l.unit}" data-k="unit" placeholder="عدد" class="${INP}" style="min-width:4rem"></td>
         <td><input value="${l.qty}" data-k="qty" type="number" min="0" oninput="prLive(this)" class="${INP}" dir="ltr" style="min-width:5rem"></td>
-        <td><input value="${l.est}" data-k="est" type="number" min="0" step="0.01" oninput="prLive(this)" class="${INP}" dir="ltr" style="min-width:6rem"></td>
+        <td><input value="${l.est}" data-k="est" type="number" min="0" step="0.01" oninput="prLive(this)" class="${INP}" dir="ltr" style="min-width:6rem">${l.estSrc?`<div class="text-[10px] text-slate-400 mt-0.5 whitespace-nowrap">${l.estSrc}</div>`:''}</td>
         <td class="rowval font-semibold whitespace-nowrap">${fmtMoney((+l.qty||0)*(+l.est||0))}</td>
         <td><button onclick="prDelRow(${ix})" class="text-red-600 font-extrabold px-2">×</button></td></tr>`).join('')}</tbody>
       <tfoot><tr class="bg-slate-50 font-extrabold"><td colspan="5">الإجمالي التقديري</td><td colspan="2" id="pr-total">${fmtMoney(NEWPR.lines.reduce((a,l)=>a+(+l.qty||0)*(+l.est||0),0))}</td></tr></tfoot></table></div>
     <div class="err text-xs text-red-600 font-bold"></div>
     <div class="flex justify-between gap-2 flex-wrap">
-      <button onclick="closeModal()" class="px-4 py-2.5 rounded-xl border border-slate-300 font-bold text-sm">إلغاء</button>
+      <div class="flex gap-2"><button onclick="renderNewPR(0)" class="px-4 py-2.5 rounded-xl border border-slate-300 font-bold text-sm">→ رجوع</button><button onclick="closeModal()" class="px-4 py-2.5 rounded-xl border border-slate-300 font-bold text-sm">إلغاء</button></div>
       <div class="flex gap-2"><button onclick="savePR(false)" class="px-4 py-2.5 rounded-xl border border-brand-300 text-brand-800 font-bold text-sm">حفظ كمسودة</button><button onclick="savePR(true)" class="px-5 py-2.5 rounded-xl bg-brand-800 text-white font-bold text-sm">إرسال للاعتماد ←</button></div></div>
-  </div>`, 'w-full max-w-5xl max-h-[94vh]');
+  </div>`;
+  const body = src ? `<div class="grid grid-cols-1 lg:grid-cols-2">
+      <div class="bg-slate-200 p-5 border-l border-slate-300 overflow-y-auto" style="max-height:78vh">${prDoc()}<div class="text-center text-xs text-slate-500 mt-3">مرّر المؤشر فوق أي حقل لتحديد موضعه في المستند</div></div>
+      <div class="p-6"><div class="bg-amber-50 border border-amber-200 rounded-xl p-3 text-xs text-amber-900 mb-4 leading-relaxed">استُخرجت البيانات من <b>${src.name}</b> — ${fmtNum(src.pages)} صفحة · <span dir="ltr">${src.provider}</span> · ثقة إجمالية ${fmtPct(src.overall*100)} · مرجع الموقع ${src.ref}. راجع الحقول المظلّلة وعدّلها؛ تُحفظ القيمة الأصلية المستخرجة بجانب أي تعديل.</div>${form}</div></div>`
+    : `<div class="p-6">${form}</div>`;
+  showModal(mHead('طلب شراء جديد', `${nextPRNo()} · يُرفع لاعتماد مدير المشتريات ثم يُطرح لعروض الأسعار`) + `<div class="mbody flex-1 overflow-y-auto">${body}</div>`, src ? 'w-full max-w-7xl max-h-[94vh]' : 'w-full max-w-5xl max-h-[94vh]');
 }
-function prCollect(){ const f=document.getElementById('prform'); ['title','proj','dept','need','just'].forEach(n=>NEWPR[n]=f.querySelector(`[name=${n}]`).value.trim()); NEWPR.lines=[...f.querySelectorAll('#pr-rows tr')].map(r=>{const o={}; r.querySelectorAll('[data-k]').forEach(e=>o[e.dataset.k]=e.value.trim()); return o;}); }
+function prCollect(){ const f=document.getElementById('prform'); ['title','proj','dept','need','just'].forEach(n=>NEWPR[n]=f.querySelector(`[name=${n}]`).value.trim()); NEWPR.lines=[...f.querySelectorAll('#pr-rows tr')].map((r,ix)=>{const o={}, p=NEWPR.lines[ix]; if(p){ if(p.conf!==undefined) o.conf=p.conf; if(p.estSrc) o.estSrc=p.estSrc; } r.querySelectorAll('[data-k]').forEach(e=>o[e.dataset.k]=e.value.trim()); return o;}); }
 function prLive(el){ const tr=el.closest('tr'); tr.querySelector('.rowval').textContent=fmtMoney((+tr.querySelector('[data-k=qty]').value||0)*(+tr.querySelector('[data-k=est]').value||0)); document.getElementById('pr-total').textContent=fmtMoney([...document.querySelectorAll('#pr-rows tr')].reduce((a,r)=>a+(+r.querySelector('[data-k=qty]').value||0)*(+r.querySelector('[data-k=est]').value||0),0)); }
-function prAddRow(){ prCollect(); NEWPR.lines.push({item:'',spec:'',unit:'',qty:'',est:''}); renderNewPR(); }
-function prDelRow(ix){ prCollect(); NEWPR.lines.splice(ix,1); if(!NEWPR.lines.length) NEWPR.lines.push({item:'',spec:'',unit:'',qty:'',est:''}); renderNewPR(); }
+function prAddRow(){ prCollect(); NEWPR.lines.push({item:'',spec:'',unit:'',qty:'',est:''}); renderNewPR(1); }
+function prDelRow(ix){ prCollect(); NEWPR.lines.splice(ix,1); if(!NEWPR.lines.length) NEWPR.lines.push({item:'',spec:'',unit:'',qty:'',est:''}); renderNewPR(1); }
 function savePR(submit){
   prCollect(); const f=document.getElementById('prform');
   if(!NEWPR.title||!NEWPR.dept||!NEWPR.need||!NEWPR.just) return f.querySelector('.err').textContent='الموضوع والإدارة وتاريخ الحاجة والمبرر إلزامية.';
   if(NEWPR.lines.some(l=>!l.item||!l.unit||!(+l.qty>0)||!(+l.est>=0))) return f.querySelector('.err').textContent='كل بند يحتاج اسماً ووحدة وكمية أكبر من صفر وسعراً تقديرياً.';
   const pr={id:nextPRNo(), title:NEWPR.title, proj:NEWPR.proj, dept:NEWPR.dept, by:ME.name, date:new Date().toISOString().slice(0,10), need:NEWPR.need, just:NEWPR.just, status:submit?'pr_approval':'draft',
-    lines:NEWPR.lines.map(l=>({item:l.item, spec:l.spec, unit:l.unit, qty:+l.qty, est:+l.est})), quotes:[], events:[]};
-  PRS.push(pr); prEvent(pr, submit?'إنشاء طلب الشراء وإرساله للاعتماد':'إنشاء طلب الشراء (مسودة)', `قيمة تقديرية ${fmtMoney(prEst(pr))}`);
+    lines:NEWPR.lines.map(l=>({item:l.item, spec:l.spec, unit:l.unit, qty:+l.qty, est:+l.est})), quotes:[], events:[],
+    doc: NEWPR.src ? {name:NEWPR.src.name, pages:NEWPR.src.pages, provider:NEWPR.src.provider, overall:NEWPR.src.overall, ref:NEWPR.src.ref, changed:prExtractionChanges(), by:ME.name} : null};
+  PRS.push(pr); prEvent(pr, submit?'إنشاء طلب الشراء وإرساله للاعتماد':'إنشاء طلب الشراء (مسودة)', `قيمة تقديرية ${fmtMoney(prEst(pr))}${pr.doc?` — من المستند ${pr.doc.name} (استخراج آلي ${fmtPct(pr.doc.overall*100)}، ${pr.doc.changed?`عُدِّل ${fmtNum(pr.doc.changed)} قيمة`:'بدون تعديل'})`:''}`);
   toast(submit?`أُرسل ${pr.id} للاعتماد`:`حُفظ ${pr.id} كمسودة`); closeModal(); go('procurement'); openPR(pr.id,'req');
 }
 
