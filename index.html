@@ -2518,15 +2518,15 @@ const vendorOf = id => VENDORS.find(v=>v.id===id)||{name:'—'};
 const PR_STATUS = {
   draft:      {ar:'مسودة',                      cls:'bg-slate-100 text-slate-700'},
   pr_approval:{ar:'بانتظار اعتماد الطلب',        cls:'bg-amber-100 text-amber-800'},
-  approved:   {ar:'معتمد — بانتظار طلب العروض',  cls:'bg-amber-100 text-amber-800'},
-  rfq_sent:   {ar:'طلب عروض مُرسل',              cls:'bg-blue-100 text-blue-700'},
+  approved:   {ar:'معتمد — بانتظار تسجيل طلب العروض', cls:'bg-amber-100 text-amber-800'},
+  rfq_sent:   {ar:'استلام العروض',               cls:'bg-blue-100 text-blue-700'},
   tech_eval:  {ar:'التقييم الفني',               cls:'bg-brand-100 text-brand-800'},
   comm_eval:  {ar:'التقييم التجاري',             cls:'bg-brand-100 text-brand-800'},
   po_approval:{ar:'بانتظار اعتماد أمر الشراء',   cls:'bg-amber-100 text-amber-800'},
   po_issued:  {ar:'أمر شراء صادر',               cls:'bg-emerald-100 text-emerald-700'},
   cancelled:  {ar:'ملغى',                        cls:'bg-slate-200 text-slate-600'}
 };
-const PR_STAGES = [['pr_approval','اعتماد الطلب'],['rfq_sent','طلب العروض'],['tech_eval','التقييم الفني'],['comm_eval','التقييم التجاري'],['po_approval','اعتماد الشراء'],['po_issued','أمر الشراء']];
+const PR_STAGES = [['pr_approval','اعتماد الطلب'],['rfq_sent','استلام العروض'],['tech_eval','التقييم الفني'],['comm_eval','التقييم التجاري'],['po_approval','اعتماد الشراء'],['po_issued','أمر الشراء']];
 const stageIdx = st => ({draft:-1, pr_approval:0, approved:0, rfq_sent:1, tech_eval:2, comm_eval:3, po_approval:4, po_issued:5, cancelled:-1})[st];
 /* thresholds — mirrored in the settings screen; editable by Admin in production */
 const PROC = { minQuotes:3, techPass:70, wTech:60, wComm:40,
@@ -2539,9 +2539,9 @@ const PRS = [
   lines:[{item:'حديد تسليح قطر ١٦ مم', spec:'SASO / ASTM A615 Grade 60', unit:'طن', qty:280, est:3150},{item:'حديد تسليح قطر ٢٥ مم', spec:'SASO / ASTM A615 Grade 60', unit:'طن', qty:190, est:3150}],
   rfq:{sent:'2026-06-16', vendors:['V-03','V-07','V-08']},
   quotes:[
-    {vendor:'V-03', date:'2026-06-21', valid:'2026-08-21', days:14, terms:'٣٠ يوماً من الاستلام', prices:[3080,3095], tech:{spec:9,delivery:8,exp:9,warranty:9}},
-    {vendor:'V-07', date:'2026-06-22', valid:'2026-08-15', days:21, terms:'٥٠٪ مقدم · ٥٠٪ عند التسليم', prices:[3120,3120], tech:{spec:8,delivery:7,exp:8,warranty:8}},
-    {vendor:'V-08', date:'2026-06-23', valid:'2026-08-30', days:18, terms:'٤٥ يوماً', prices:[3095,3110], tech:{spec:8,delivery:8,exp:7,warranty:8}}],
+    {vendor:'V-03', date:'2026-06-21', valid:'2026-08-21', days:14, terms:'٣٠ يوماً من الاستلام', prices:[3080,3095], tech:{spec:9,delivery:8,exp:9,warranty:9, file:'عرض_V-03_2026-06-21.pdf'}},
+    {vendor:'V-07', date:'2026-06-22', valid:'2026-08-15', days:21, terms:'٥٠٪ مقدم · ٥٠٪ عند التسليم', prices:[3120,3120], tech:{spec:8,delivery:7,exp:8,warranty:8, file:'عرض_V-07_2026-06-22.pdf'}},
+    {vendor:'V-08', date:'2026-06-23', valid:'2026-08-30', days:18, terms:'٤٥ يوماً', prices:[3095,3110], tech:{spec:8,delivery:8,exp:7,warranty:8, file:'عرض_V-08_2026-06-23.pdf'}}],
   award:{vendor:'V-03', reason:'أعلى درجة مجمّعة وأقل سعر بين العروض المؤهلة فنياً.', by:'خالد العصيمي', at:'2026-06-27 10:40'},
   approvals:[{role:'مدير المشتريات',by:'خالد العصيمي',at:'2026-06-28 09:12'},{role:'المدير المالي',by:'سارة الدوسري',at:'2026-06-30 14:05'},{role:'المدير العام',by:'عبدالله العرين',at:'2026-07-01 11:30'}],
   po:{id:'PO-2026-009', date:'2026-07-02', vendor:'V-03', delivery:'2026-07-20', by:'خالد العصيمي'},
@@ -2552,9 +2552,9 @@ const PRS = [
   lines:[{item:'كابل نحاس معزول ٤×٩٥ مم²', spec:'XLPE/PVC 0.6/1kV — IEC 60502', unit:'م.ط', qty:4200, est:118},{item:'لوحة توزيع رئيسية ٤٠٠ أمبير', spec:'Form 3b · IP54 · شهادة سابر', unit:'عدد', qty:6, est:18500},{item:'مواسير PVC قطر ٢٥ مم', spec:'ثقيلة الوزن — SASO', unit:'م.ط', qty:9500, est:14.25}],
   rfq:{sent:'2026-08-06', vendors:['V-01','V-02','V-03']},
   quotes:[
-    {vendor:'V-01', date:'2026-08-12', valid:'2026-10-15', days:21, terms:'٣٠ يوماً من الاستلام', prices:[121,19200,13.9], tech:{spec:9,delivery:8,exp:9,warranty:8}},
-    {vendor:'V-02', date:'2026-08-13', valid:'2026-09-30', days:35, terms:'٥٠٪ مقدم', prices:[116,18200,13.2], tech:{spec:7,delivery:5,exp:6,warranty:6}},
-    {vendor:'V-03', date:'2026-08-14', valid:'2026-10-31', days:18, terms:'٤٥ يوماً', prices:[124,19800,14.1], tech:{spec:8,delivery:9,exp:7,warranty:7}}],
+    {vendor:'V-01', date:'2026-08-12', valid:'2026-10-15', days:21, terms:'٣٠ يوماً من الاستلام', prices:[121,19200,13.9], tech:{spec:9,delivery:8,exp:9,warranty:8, file:'عرض_V-01_2026-08-12.pdf'}},
+    {vendor:'V-02', date:'2026-08-13', valid:'2026-09-30', days:35, terms:'٥٠٪ مقدم', prices:[116,18200,13.2], tech:{spec:7,delivery:5,exp:6,warranty:6, file:'عرض_V-02_2026-08-13.pdf'}},
+    {vendor:'V-03', date:'2026-08-14', valid:'2026-10-31', days:18, terms:'٤٥ يوماً', prices:[124,19800,14.1], tech:{spec:8,delivery:9,exp:7,warranty:7, file:'عرض_V-03_2026-08-14.pdf'}}],
   events:[['إنشاء طلب الشراء','سارة الدوسري','2026-08-03 11:05',''],['اعتماد الطلب','خالد العصيمي','2026-08-04 09:40',''],['إرسال طلب عروض الأسعار','خالد العصيمي','2026-08-06 10:00','٣ موردين'],['استلام ٣ عروض','النظام','2026-08-14 15:20','اكتمل الحد الأدنى'],['اعتماد التقييم الفني','محمد الشمري','2026-08-18 13:30','عرض واحد لم يجتز الحد ٧٠٪']]},
 
  {id:'PR-2026-019', title:'عزل حراري لأسطح الأبراج', proj:'P-001', dept:'التشطيبات', by:'محمد الشمري', date:'2026-08-10', need:'2026-10-15', status:'tech_eval',
@@ -2562,9 +2562,9 @@ const PRS = [
   lines:[{item:'عزل حراري بولي يوريثان سماكة ٥ سم', spec:'كثافة ٤٠ كجم/م³ — SBC 602', unit:'م²', qty:4200, est:46},{item:'طبقة حماية وميول', spec:'مونة إسمنتية خفيفة', unit:'م²', qty:4200, est:12}],
   rfq:{sent:'2026-08-12', vendors:['V-09','V-10','V-03']},
   quotes:[
-    {vendor:'V-09', date:'2026-08-19', valid:'2026-10-19', days:25, terms:'٣٠ يوماً', prices:[44,11.5], tech:{spec:9,delivery:8,exp:8,warranty:9}},
-    {vendor:'V-10', date:'2026-08-20', valid:'2026-10-10', days:30, terms:'٤٠٪ مقدم', prices:[47,12], tech:null},
-    {vendor:'V-03', date:'2026-08-21', valid:'2026-11-01', days:28, terms:'٤٥ يوماً', prices:[45,11], tech:null}],
+    {vendor:'V-09', date:'2026-08-19', valid:'2026-10-19', days:25, terms:'٣٠ يوماً', prices:[44,11.5], tech:{spec:9,delivery:8,exp:8,warranty:9, file:'عرض_V-09_2026-08-19.pdf'}},
+    {vendor:'V-10', date:'2026-08-20', valid:'2026-10-10', days:30, terms:'٤٠٪ مقدم', prices:[47,12], tech:null, file:'عرض_V-10_2026-08-20.pdf'},
+    {vendor:'V-03', date:'2026-08-21', valid:'2026-11-01', days:28, terms:'٤٥ يوماً', prices:[45,11], tech:null, file:'عرض_V-03_2026-08-21.pdf'}],
   events:[['إنشاء طلب الشراء','محمد الشمري','2026-08-10 08:50',''],['اعتماد الطلب','خالد العصيمي','2026-08-11 10:10',''],['إرسال طلب عروض الأسعار','خالد العصيمي','2026-08-12 09:00','٣ موردين'],['استلام ٣ عروض','النظام','2026-08-21 17:05','اكتمل الحد الأدنى'],['بدء التقييم الفني','محمد الشمري','2026-08-24 09:30','']]},
 
  {id:'PR-2026-021', title:'خرسانة جاهزة C40 / C30 — أساسات البرج الثالث', proj:'P-001', dept:'الإنشاءات', by:'محمد الشمري', date:'2026-08-20', need:'2026-09-25', status:'rfq_sent',
@@ -2572,8 +2572,8 @@ const PRS = [
   lines:[{item:'خرسانة جاهزة C40', spec:'هبوط ١٠±٢ سم · SRC', unit:'م³', qty:1800, est:320},{item:'خرسانة جاهزة C30', spec:'هبوط ١٠±٢ سم · OPC', unit:'م³', qty:600, est:285}],
   rfq:{sent:'2026-08-24', vendors:['V-04','V-05','V-03']},
   quotes:[
-    {vendor:'V-04', date:'2026-08-29', valid:'2026-10-29', days:7, terms:'٣٠ يوماً', prices:[312,278], tech:null},
-    {vendor:'V-05', date:'2026-08-31', valid:'2026-10-15', days:5, terms:'١٥ يوماً', prices:[305,281], tech:null}],
+    {vendor:'V-04', date:'2026-08-29', valid:'2026-10-29', days:7, terms:'٣٠ يوماً', prices:[312,278], tech:null, file:'عرض_V-04_2026-08-29.pdf'},
+    {vendor:'V-05', date:'2026-08-31', valid:'2026-10-15', days:5, terms:'١٥ يوماً', prices:[305,281], tech:null, file:'عرض_V-05_2026-08-31.pdf'}],
   events:[['إنشاء طلب الشراء','محمد الشمري','2026-08-20 10:00',''],['اعتماد الطلب','خالد العصيمي','2026-08-22 12:30',''],['إرسال طلب عروض الأسعار','خالد العصيمي','2026-08-24 09:15','٣ موردين']]},
 
  {id:'PR-2026-023', title:'معدات سلامة ووقاية شخصية', proj:'P-002', dept:'السلامة', by:'سارة الدوسري', date:'2026-09-01', need:'2026-09-20', status:'rfq_sent',
@@ -2612,7 +2612,7 @@ function prEvent(pr,title,detail){ (pr.events=pr.events||[]).push([title, ME.nam
 /* ── page ── */
 PAGES.procurement = () => {
   const open = PRS.filter(p=>!['po_issued','cancelled','draft'].includes(p.status));
-  const nextStep = p => ({draft:'إرسال للاعتماد', pr_approval:'اعتماد الطلب', approved:'إرسال طلب العروض', rfq_sent:p.quotes.length>=PROC.minQuotes?'بدء التقييم الفني':`بانتظار العروض (${fmtNum(p.quotes.length)} من ${fmtNum(PROC.minQuotes)})`, tech_eval:'إكمال التقييم الفني', comm_eval:'الترسية ورفعها للاعتماد', po_approval:'اعتماد أمر الشراء', po_issued:'—', cancelled:'—'})[p.status];
+  const nextStep = p => ({draft:'إرسال للاعتماد', pr_approval:'اعتماد الطلب', approved:'تسجيل الموردين المدعوين', rfq_sent:p.quotes.length>=PROC.minQuotes?'بدء التقييم الفني':`رفع العروض المستلمة (${fmtNum(p.quotes.length)} من ${fmtNum(PROC.minQuotes)})`, tech_eval:'إكمال التقييم الفني', comm_eval:'الترسية ورفعها للاعتماد', po_approval:'اعتماد أمر الشراء', po_issued:'—', cancelled:'—'})[p.status];
   return `
   <div class="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-4 gap-4 mb-6">
     ${card('طلبات شراء مفتوحة', fmtNum(open.length), 'من الطلب حتى إصدار أمر الشراء','brand')}
@@ -2645,8 +2645,8 @@ let PRTAB='req';
 function openPR(id, tab){
   const pr=findPR(id); PRTAB = tab||PRTAB||'req';
   const tabs=[['req','الطلب'],['quotes',`عروض الأسعار (${fmtNum(pr.quotes.length)})`],['tech','التقييم الفني'],['comm','التقييم التجاري'],['po','الاعتماد وأمر الشراء'],['log','السجل']];
-  const next = {draft:['quotes','إرسال للاعتماد',`submitPR('${id}')`], pr_approval:['req','اعتماد الطلب',`approvePR('${id}')`], approved:['quotes','إرسال طلب عروض الأسعار ←',`openPR('${id}','quotes')`],
-    rfq_sent:['quotes', pr.quotes.length>=PROC.minQuotes?'بدء التقييم الفني':'إضافة عرض سعر ←', pr.quotes.length>=PROC.minQuotes?`startTech('${id}')`:`openPR('${id}','quotes')`],
+  const next = {draft:['quotes','إرسال للاعتماد',`submitPR('${id}')`], pr_approval:['req','اعتماد الطلب',`approvePR('${id}')`], approved:['quotes','تسجيل طلب العروض ←',`openPR('${id}','quotes')`],
+    rfq_sent:['quotes', pr.quotes.length>=PROC.minQuotes?'بدء التقييم الفني':'رفع عرض سعر مستلم ←', pr.quotes.length>=PROC.minQuotes?`startTech('${id}')`:`openPR('${id}','quotes')`],
     tech_eval:['tech','إكمال التقييم الفني ←',`openPR('${id}','tech')`], comm_eval:['comm','الترسية ورفعها للاعتماد ←',`openPR('${id}','comm')`],
     po_approval:['po','اعتماد أمر الشراء ←',`openPR('${id}','po')`], po_issued:['po','عرض مستند أمر الشراء',`openPO('${id}')`], cancelled:null}[pr.status];
   const canAct = ['admin','reviewer'].includes(ME.role);
@@ -2699,38 +2699,25 @@ function prTab(pr){
   if(PRTAB==='quotes'){
     if(['draft','pr_approval'].includes(st)) return note('تُرسل طلبات عروض الأسعار بعد اعتماد طلب الشراء.');
     if(st==='approved') return `<div class="max-w-2xl" id="rfq-form">
-      <h4 class="font-extrabold text-brand-800 mb-1">إرسال طلب عروض الأسعار (RFQ)</h4>
-      <p class="text-xs text-slate-500 mb-4">اختر ${fmtNum(PROC.minQuotes)} موردين على الأقل من السجل المعتمد. يُرسل الطلب بالبريد مع بنود الطلب ومواصفاته وتاريخ الإغلاق.</p>
+      <h4 class="font-extrabold text-brand-800 mb-1">تسجيل طلب عروض الأسعار (RFQ)</h4>
+      <p class="text-xs text-slate-500 mb-1">سجّل الموردين الذين طُلبت منهم العروض <b>خارج النظام</b> (بريد، واتساب، تسليم باليد) وتاريخ إغلاق الاستلام — ${fmtNum(PROC.minQuotes)} موردين على الأقل من السجل المعتمد.</p>
+      <p class="text-xs text-amber-800 bg-amber-50 border border-amber-200 rounded-lg px-3 py-2 mb-4">لا يرسل النظام أي مراسلات للموردين. العروض تصل يدوياً ويرفعها المستخدم هنا (ملف العرض ← استخراج آلي ← مراجعة).</p>
       <div class="space-y-2 mb-4">${VENDORS.map(v=>`<label class="flex items-center gap-3 border border-slate-200 rounded-xl px-4 py-2.5 text-sm hover:bg-slate-50"><input type="checkbox" value="${v.id}" class="w-4 h-4"><span class="flex-1"><b>${v.name}</b><span class="text-xs text-slate-400"> · ${v.cat} · ${v.city}</span></span><span class="text-[11px] text-slate-400" dir="ltr">${v.vat}</span></label>`).join('')}</div>
       <label class="block mb-4"><span class="text-xs font-bold text-slate-600 mb-1 block">تاريخ إغلاق استلام العروض</span><input type="date" name="close" class="${INP}" dir="ltr" style="max-width:14rem"></label>
       <div class="err text-xs text-red-600 font-bold mb-2"></div>
-      ${canAct?`<button onclick="sendRfq('${id}')" class="px-5 py-2.5 rounded-xl bg-brand-800 text-white font-bold text-sm">إرسال طلب عروض الأسعار</button>`:''}
+      ${canAct?`<button onclick="sendRfq('${id}')" class="px-5 py-2.5 rounded-xl bg-brand-800 text-white font-bold text-sm">تسجيل الموردين وفتح استلام العروض</button>`:''}
     </div>`;
     const pending = pr.rfq.vendors.filter(v=>!pr.quotes.some(q=>q.vendor===v));
     const enough = pr.quotes.length>=PROC.minQuotes;
     return `
     <div class="flex items-center justify-between flex-wrap gap-3 mb-4">
-      <div class="text-sm"><b>طلب العروض أُرسل</b> ${dtBoth(pr.rfq.sent)} إلى ${fmtNum(pr.rfq.vendors.length)} موردين</div>
+      <div class="text-sm"><b>طلب العروض سُجِّل</b> ${dtBoth(pr.rfq.sent)} — ${fmtNum(pr.rfq.vendors.length)} موردين مدعوون${pr.rfq.close?` · إغلاق الاستلام ${dt(pr.rfq.close)}`:''} · <span class="text-slate-500">تصل العروض يدوياً وتُرفع هنا</span></div>
       <span class="text-xs font-bold px-3 py-1.5 rounded-full ${enough?'bg-emerald-100 text-emerald-700':'bg-amber-100 text-amber-800'}">${enough?'✓ اكتمل الحد الأدنى':'⏳'} مستلم ${fmtNum(pr.quotes.length)} من ${fmtNum(PROC.minQuotes)} عروض</span>
     </div>
     <div class="tbl-wrap mb-5"><table class="tbl w-full text-sm"><thead><tr><th>المورد</th><th>تاريخ العرض</th><th>صالح حتى</th><th>مدة التوريد</th><th>شروط الدفع</th><th>الإجمالي قبل الضريبة</th><th>الضريبة ١٥٪</th><th>الإجمالي</th><th>المرفق</th></tr></thead>
-      <tbody>${pr.quotes.map(q=>{const t=qTotal(pr,q);return `<tr><td class="font-semibold">${vendorOf(q.vendor).name}</td><td class="whitespace-nowrap text-slate-500">${dt(q.date)}</td><td class="whitespace-nowrap text-slate-500">${dt(q.valid)}</td><td>${fmtNum(q.days)} يوماً</td><td class="text-xs">${q.terms}</td><td class="font-semibold whitespace-nowrap">${fmtMoney(t)}</td><td class="whitespace-nowrap">${fmtMoney(t*0.15)}</td><td class="font-extrabold whitespace-nowrap">${fmtMoney(t*1.15)}</td><td class="text-xs text-brand-700">📎 PDF</td></tr>`}).join('')}
+      <tbody>${pr.quotes.map(q=>{const t=qTotal(pr,q);return `<tr><td class="font-semibold">${vendorOf(q.vendor).name}</td><td class="whitespace-nowrap text-slate-500">${dt(q.date)}</td><td class="whitespace-nowrap text-slate-500">${dt(q.valid)}</td><td>${fmtNum(q.days)} يوماً</td><td class="text-xs">${q.terms}</td><td class="font-semibold whitespace-nowrap">${fmtMoney(t)}</td><td class="whitespace-nowrap">${fmtMoney(t*0.15)}</td><td class="font-extrabold whitespace-nowrap">${fmtMoney(t*1.15)}</td><td class="text-xs text-brand-700 whitespace-nowrap">📎 ${q.file||'عرض_'+q.vendor+'.pdf'}</td></tr>`}).join('')}
       ${pending.map(v=>`<tr class="text-slate-400"><td>${vendorOf(v).name}</td><td colspan="8" class="text-xs">لم يصل عرض بعد</td></tr>`).join('')}</tbody></table></div>
-    ${st==='rfq_sent' && canAct && pending.length ? `<div class="border border-slate-200 rounded-2xl p-4" id="quote-form">
-      <h4 class="font-extrabold text-brand-800 mb-3">تسجيل عرض سعر مستلم</h4>
-      <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3 mb-3">
-        ${F('المورد',`<select name="vendor" class="${INP}">${pending.map(v=>`<option value="${v}">${vendorOf(v).name}</option>`).join('')}</select>`)}
-        ${F('تاريخ العرض',`<input type="date" name="date" value="${new Date().toISOString().slice(0,10)}" class="${INP}" dir="ltr">`)}
-        ${F('صالح حتى',`<input type="date" name="valid" class="${INP}" dir="ltr">`)}
-        ${F('مدة التوريد (يوم)',`<input type="number" name="days" min="1" class="${INP}" dir="ltr">`)}
-        ${F('شروط الدفع',`<input name="terms" placeholder="مثال: ٣٠ يوماً من الاستلام" class="${INP}">`,false)}
-      </div>
-      <div class="text-xs font-bold text-slate-600 mb-1">أسعار الوحدة حسب بنود الطلب <span class="text-red-500">*</span></div>
-      <div class="tbl-wrap mb-3"><table class="tbl w-full text-sm"><thead><tr><th>البند</th><th>الكمية</th><th>سعر الوحدة (ر.س)</th><th>الإجمالي</th></tr></thead>
-        <tbody>${pr.lines.map((l,ix)=>`<tr><td>${l.item}</td><td>${fmtNum(l.qty)} ${l.unit}</td><td><input type="number" min="0" step="0.01" data-px="${ix}" oninput="quoteLive(this,${l.qty})" class="${INP}" dir="ltr" style="max-width:9rem"></td><td class="qv font-semibold whitespace-nowrap">—</td></tr>`).join('')}</tbody></table></div>
-      <div class="err text-xs text-red-600 font-bold mb-2"></div>
-      <button onclick="addQuote('${id}')" class="px-5 py-2.5 rounded-xl bg-brand-800 text-white font-bold text-sm">حفظ العرض</button>
-    </div>`:''}
+    ${st==='rfq_sent' && canAct && pending.length ? quoteEntry(pr, pending) : ''}
     ${st==='rfq_sent' && enough && canAct ? `<div class="mt-4 flex items-center gap-3 flex-wrap"><button onclick="startTech('${id}')" class="px-5 py-2.5 rounded-xl bg-brand-800 text-white font-bold text-sm">بدء التقييم الفني ←</button><span class="text-xs text-slate-500">تُقفل العروض عند بدء التقييم ولا تُقبل عروض إضافية.</span></div>`:''}
     ${st==='rfq_sent' && !enough ? `<div class="mt-4 text-xs text-amber-700 font-bold">⛔ لا يمكن بدء التقييم — يلزم ${fmtNum(PROC.minQuotes-pr.quotes.length)} عرض إضافي على الأقل.</div>`:''}`;
   }
@@ -2818,15 +2805,77 @@ function sendRfq(id){
   if(vs.length<PROC.minQuotes) return f.querySelector('.err').textContent=`اختر ${fmtNum(PROC.minQuotes)} موردين على الأقل (المحدد ${fmtNum(vs.length)}).`;
   if(!close) return f.querySelector('.err').textContent='حدد تاريخ إغلاق استلام العروض.';
   pr.rfq={sent:new Date().toISOString().slice(0,10), vendors:vs, close}; pr.status='rfq_sent';
-  prEvent(pr,'إرسال طلب عروض الأسعار',`${fmtNum(vs.length)} موردين · الإغلاق ${close}`); toast(`أُرسل طلب العروض إلى ${fmtNum(vs.length)} موردين`); openPR(id,'quotes');
+  prEvent(pr,'تسجيل طلب عروض الأسعار',`${fmtNum(vs.length)} موردين مدعوون خارج النظام · الإغلاق ${close}`); toast(`سُجِّل طلب العروض — بانتظار رفع عروض ${fmtNum(vs.length)} موردين`); openPR(id,'quotes');
+}
+/* — quotation intake — */
+let QENTRY={mode:'choose'};
+const QUOTE_EXTRACT_STEPS=['تحميل ملف العرض وحساب بصمته','التعرف على النص (عربي / إنجليزي)','استخراج المورد وتاريخ العرض وصلاحيته وشروطه','قراءة جدول الأسعار ومطابقته ببنود الطلب','التحقق من الرقم الضريبي للمورد في السجل'];
+function quoteFile(prId,file){ if(!file) return; QENTRY={mode:'extract', prId, src:{name:file.name,size:file.size||0}}; quoteExtractProgress(0); }
+function quoteExtractProgress(i){
+  showModal(mHead('استخراج بيانات عرض السعر', `${QENTRY.src.name} · ${(QENTRY.src.size/1048576).toFixed(1)} م.ب`) + `<div class="p-6 space-y-3">${QUOTE_EXTRACT_STEPS.map((t,ix)=>`<div class="flex items-center gap-3 text-sm"><div class="w-7 h-7 rounded-full flex items-center justify-center text-xs font-extrabold shrink-0 ${ix<i?'bg-emerald-600 text-white':ix===i?'bg-gold-500 text-white':'bg-slate-200 text-slate-500'}">${ix<i?'✓':fmtNum(ix+1)}</div><span class="${ix<=i?'font-bold text-slate-800':'text-slate-400'}">${t}</span>${ix===i?'<span class="text-xs text-slate-400">جارٍ…</span>':''}</div>`).join('')}<div class="h-2 bg-slate-100 rounded-full overflow-hidden mt-4"><div class="h-full bg-brand-700" style="width:${i/QUOTE_EXTRACT_STEPS.length*100}%;transition:width .4s"></div></div><div class="text-xs text-slate-400">الاستخراج محلي بالكامل — لا يغادر المستند بيئة النظام ولا يُراسَل المورد.</div></div>`, 'w-full max-w-lg');
+  clearTimeout(extractProgress._t);
+  extractProgress._t=setTimeout(()=>{ if(i<QUOTE_EXTRACT_STEPS.length) quoteExtractProgress(i+1); else { applyQuoteExtraction(); openPR(QENTRY.prId,'quotes'); } }, i<QUOTE_EXTRACT_STEPS.length?520:250);
+}
+function applyQuoteExtraction(){
+  const pr=findPR(QENTRY.prId), pending=pr.rfq.vendors.filter(v=>!pr.quotes.some(q=>q.vendor===v)), vendor=pending[0];
+  const d=new Date(), valid=new Date(); valid.setDate(valid.getDate()+60);
+  const factors=[1.03,0.98,1.06,0.95,1.01], confs=[.96,.58,.93,.9,.87];
+  QENTRY.values={vendor, date:d.toISOString().slice(0,10), valid:valid.toISOString().slice(0,10), days:21, terms:'٣٠ يوماً من الاستلام', prices:pr.lines.map((l,ix)=>Math.round(l.est*factors[ix%5]*100)/100)};
+  QENTRY.conf={vendor:.91, date:.95, valid:.82, days:.7, terms:.88, prices:pr.lines.map((_,ix)=>confs[ix%5])};
+  QENTRY.src={...QENTRY.src, pages:2, provider:'pdf-text', overall:.88, ref:'QT-'+String(1800+pr.quotes.length*7+pending.length).padStart(4,'0')};
+  QENTRY.mode='review';
+}
+function quoteDoc(pr){
+  const v=vendorOf(QENTRY.values.vendor), q=QENTRY.values, sub=pr.lines.reduce((a,l,ix)=>a+l.qty*q.prices[ix],0);
+  return `<div class="doc-page cdoc rounded-lg p-7 mx-auto max-w-lg text-[13px] leading-loose">
+    <div class="flex justify-between items-start border-b-2 border-slate-800 pb-2 mb-3"><div><div class="font-extrabold" data-f="vendor">${v.name}</div><div class="text-[11px] text-slate-500">${v.city} · س.ت ${v.cr} · الرقم الضريبي ${v.vat}</div></div><div class="text-left"><div class="font-extrabold">عرض سعر</div><div class="text-[11px] text-slate-500">QUOTATION</div><div class="text-xs font-bold mt-1" dir="ltr">${QENTRY.src.ref}</div></div></div>
+    <p>السادة / اتحاد العرين للمقاولات — إشارة إلى طلبكم <b>${pr.id}</b> — ${pr.title}</p>
+    <p>تاريخ العرض: <b data-f="date">${q.date}</b> · صالح حتى: <b data-f="valid">${q.valid}</b></p>
+    <table class="w-full text-[11px] border border-slate-300 my-3" data-f="lines"><thead><tr class="bg-slate-100"><th class="border border-slate-300 p-1">م</th><th class="border border-slate-300 p-1 text-right">البند</th><th class="border border-slate-300 p-1">الكمية</th><th class="border border-slate-300 p-1">سعر الوحدة</th><th class="border border-slate-300 p-1">الإجمالي</th></tr></thead>
+      <tbody>${pr.lines.map((l,ix)=>`<tr><td class="border border-slate-300 p-1 text-center">${fmtNum(ix+1)}</td><td class="border border-slate-300 p-1">${l.item}</td><td class="border border-slate-300 p-1 text-center">${fmtNum(l.qty)} ${l.unit}</td><td class="border border-slate-300 p-1 text-center ${QENTRY.conf.prices[ix]<.6?'text-slate-400':''}">${QENTRY.conf.prices[ix]<.6?fmtNum(q.prices[ix])+' (؟)':fmtNum(q.prices[ix])}</td><td class="border border-slate-300 p-1 text-center">${fmtNum(l.qty*q.prices[ix])}</td></tr>`).join('')}</tbody></table>
+    <div class="flex justify-end"><table class="text-[12px]"><tr><td class="pl-6">الإجمالي قبل الضريبة</td><td class="font-bold">${fmtNum(sub)}</td></tr><tr><td class="pl-6">ضريبة القيمة المضافة ١٥٪</td><td class="font-bold">${fmtNum(sub*0.15)}</td></tr><tr class="border-t border-slate-400"><td class="pl-6 font-extrabold">الإجمالي</td><td class="font-extrabold">${fmtNum(sub*1.15)}</td></tr></table></div>
+    <p class="mt-2">مدة التوريد: <b data-f="days">${fmtNum(q.days)} يوماً</b> من تاريخ أمر الشراء · شروط الدفع: <b data-f="terms">${q.terms}</b></p>
+    <div class="text-xs text-center text-slate-400 mt-4">توقيع وختم المورد · صفحة ١ من ${fmtNum(QENTRY.src.pages)}</div></div>`;
+}
+function quoteEntry(pr, pending){
+  const id=pr.id;
+  if(QENTRY.prId!==id && QENTRY.mode!=='choose') QENTRY={mode:'choose'};
+  if(QENTRY.mode==='choose') return `<div class="border border-slate-200 rounded-2xl p-4">
+    <h4 class="font-extrabold text-brand-800 mb-3">تسجيل عرض سعر مستلم</h4>
+    <div class="grid grid-cols-1 lg:grid-cols-2 gap-3">
+      <div id="cdrop" class="border-2 border-dashed border-brand-300 bg-brand-50/50 rounded-2xl p-6 text-center cursor-pointer" ondragover="event.preventDefault();this.classList.add('drag')" ondragleave="this.classList.remove('drag')" ondrop="event.preventDefault();this.classList.remove('drag');quoteFile('${id}',event.dataTransfer.files[0])" onclick="document.getElementById('qfile').click()">
+        <input id="qfile" type="file" accept=".pdf,.jpg,.jpeg,.png" hidden onchange="quoteFile('${id}',this.files[0])">
+        <div class="font-extrabold text-brand-800 mb-1">أسقط ملف عرض السعر هنا</div><div class="text-xs text-slate-500 mb-3">كما وصل من المورد — PDF أو صورة · يستخرج النظام المورد والتاريخ والصلاحية والأسعار لكل بند</div>
+        <span class="inline-block bg-brand-800 text-white text-xs font-bold rounded-xl px-4 py-2">اختيار ملف</span>
+        <div class="mt-2"><button type="button" onclick="event.stopPropagation();quoteFile('${id}',{name:'عرض_سعر_${vendorOf(pending[0]).name.split(' ').slice(0,2).join('_')}.pdf',size:940000})" class="text-[11px] text-brand-700 font-bold hover:underline">أو جرّب بمستند تجريبي ←</button></div></div>
+      <button onclick="QENTRY={mode:'manual',prId:'${id}'};openPR('${id}','quotes')" class="border-2 border-dashed border-slate-300 rounded-2xl p-6 text-center hover:bg-slate-50"><div class="text-2xl mb-1">✎</div><div class="font-extrabold text-slate-700 mb-1">إدخال يدوي</div><div class="text-xs text-slate-500">تسجيل بيانات العرض وأسعاره من الورق مباشرة</div></button>
+    </div></div>`;
+  const cm = QENTRY.mode==='review'?QENTRY.conf:null, v=QENTRY.values||{}, src=QENTRY.src;
+  const form=`<div class="border border-slate-200 rounded-2xl p-4" id="quote-form">
+      <div class="flex items-center justify-between flex-wrap gap-2 mb-3"><h4 class="font-extrabold text-brand-800">${cm?'مراجعة العرض المستخرج':'تسجيل عرض سعر مستلم'}</h4><button onclick="QENTRY={mode:'choose'};openPR('${id}','quotes')" class="text-xs font-bold text-slate-500 hover:underline">→ رجوع</button></div>
+      ${cm?`<div class="bg-amber-50 border border-amber-200 rounded-xl p-3 text-xs text-amber-900 mb-3 leading-relaxed">استُخرجت البيانات من <b>${src.name}</b> — ${fmtNum(src.pages)} صفحة · <span dir="ltr">${src.provider}</span> · ثقة إجمالية ${fmtPct(src.overall*100)} · رقم العرض ${src.ref}. راجع الحقول المظلّلة؛ تُحفظ القيمة الأصلية بجانب أي تعديل.</div>`:''}
+      <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3 mb-3">
+        ${fwc(cm,'vendor','المورد',`<select name="vendor" class="${cinpc(cm,'vendor')}">${pending.map(x=>`<option value="${x}" ${v.vendor===x?'selected':''}>${vendorOf(x).name}</option>`).join('')}</select>${cm?`<div class="text-[11px] text-emerald-700 mt-1">✓ طُوبق اسم المورد والرقم الضريبي في العرض مع السجل</div>`:''}`)}
+        ${fwc(cm,'date','تاريخ العرض',`<input type="date" name="date" value="${v.date||new Date().toISOString().slice(0,10)}" class="${cinpc(cm,'date')}" dir="ltr">`)}
+        ${fwc(cm,'valid','صالح حتى',`<input type="date" name="valid" value="${v.valid||''}" class="${cinpc(cm,'valid')}" dir="ltr">`)}
+        ${fwc(cm,'days','مدة التوريد (يوم)',`<input type="number" name="days" min="1" value="${v.days||''}" class="${cinpc(cm,'days')}" dir="ltr">`)}
+        ${fwc(cm,'terms','شروط الدفع',`<input name="terms" value="${v.terms||''}" placeholder="مثال: ٣٠ يوماً من الاستلام" class="${cinpc(cm,'terms')}">`,false)}
+      </div>
+      <div class="text-xs font-bold text-slate-600 mb-1" onmouseenter="hlDoc('lines',1)" onmouseleave="hlDoc('lines',0)">أسعار الوحدة حسب بنود الطلب <span class="text-red-500">*</span>${cm?' <span class="font-normal text-slate-400">— الصفوف المظلّلة أقل ثقة</span>':''}</div>
+      <div class="tbl-wrap mb-3"><table class="tbl w-full text-sm"><thead><tr><th>البند</th><th>الكمية</th><th>سعر الوحدة (ر.س)</th><th>الإجمالي</th></tr></thead>
+        <tbody>${pr.lines.map((l,ix)=>{const c=cm?cm.prices[ix]:null; const p=v.prices?v.prices[ix]:''; return `<tr class="${c===null?'':c<.6?'bg-red-50':c<.75?'bg-amber-50':''}"><td>${l.item}</td><td>${fmtNum(l.qty)} ${l.unit}</td><td><input type="number" min="0" step="0.01" value="${p}" data-px="${ix}" oninput="quoteLive(this,${l.qty})" class="${INP} ${c===null?'':c<.6?'border-red-400':c<.75?'border-amber-400':''}" dir="ltr" style="max-width:9rem">${c!==null?`<div class="mt-1">${confBar(c)}</div>`:''}</td><td class="qv font-semibold whitespace-nowrap">${p!==''?fmtMoney(l.qty*p):'—'}</td></tr>`;}).join('')}</tbody></table></div>
+      <div class="err text-xs text-red-600 font-bold mb-2"></div>
+      <button onclick="addQuote('${id}')" class="px-5 py-2.5 rounded-xl bg-brand-800 text-white font-bold text-sm">حفظ العرض${src?' مع الملف':''}</button>
+    </div>`;
+  return cm ? `<div class="grid grid-cols-1 lg:grid-cols-2 gap-4"><div class="bg-slate-200 rounded-2xl p-4 overflow-y-auto" style="max-height:70vh">${quoteDoc(pr)}<div class="text-center text-xs text-slate-500 mt-3">مرّر المؤشر فوق أي حقل لتحديد موضعه في العرض</div></div><div>${form}</div></div>` : form;
 }
 function addQuote(id){
   const pr=findPR(id), f=document.getElementById('quote-form'), g=n=>f.querySelector(`[name=${n}]`).value.trim();
   const prices=[...f.querySelectorAll('[data-px]')].map(i=>i.value===''?null:+i.value);
   if(!g('date')||!g('valid')||!g('days')) return f.querySelector('.err').textContent='تاريخ العرض وصلاحيته ومدة التوريد إلزامية.';
   if(prices.some(p=>p===null||p<0)) return f.querySelector('.err').textContent='أدخل سعر الوحدة لكل بند.';
-  const q={vendor:g('vendor'), date:g('date'), valid:g('valid'), days:+g('days'), terms:g('terms')||'—', prices, tech:null};
-  pr.quotes.push(q); prEvent(pr,'تسجيل عرض سعر',`${vendorOf(q.vendor).name} — ${fmtMoney(qTotal(pr,q))}`);
+  const q={vendor:g('vendor'), date:g('date'), valid:g('valid'), days:+g('days'), terms:g('terms')||'—', prices, tech:null, file:QENTRY.src?QENTRY.src.name:null, extracted:QENTRY.mode==='review'?{overall:QENTRY.src.overall, changed:QENTRY.values?prices.filter((p,ix)=>p!==QENTRY.values.prices[ix]).length:0}:null};
+  pr.quotes.push(q); prEvent(pr,'رفع عرض سعر مستلم',`${vendorOf(q.vendor).name} — ${fmtMoney(qTotal(pr,q))}${q.file?` — الملف ${q.file}${q.extracted?` (استخراج آلي ${fmtPct(q.extracted.overall*100)}، ${q.extracted.changed?`عُدِّل ${fmtNum(q.extracted.changed)} سعر`:'بدون تعديل'})`:''}`:' — إدخال يدوي'}`); QENTRY={mode:'choose'};
   if(pr.quotes.length===PROC.minQuotes) prEvent(pr,`استلام ${fmtNum(PROC.minQuotes)} عروض`,'اكتمل الحد الأدنى — يمكن بدء التقييم الفني');
   toast('سُجِّل العرض'); openPR(id,'quotes');
 }
