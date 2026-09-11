@@ -411,7 +411,7 @@ svg{display:block;vertical-align:middle}
       <label class="block text-sm font-semibold text-slate-600 mb-1">كلمة المرور</label>
       <input type="password" class="w-full border border-slate-300 rounded-xl px-4 py-2.5 mb-5 focus:ring-2 focus:ring-brand-500 outline-none" value="••••••••">
       <label class="block text-sm font-semibold text-slate-600 mb-2">الدور (نموذج أولي)</label>
-      <div id="role-picker" class="grid grid-cols-3 gap-2 mb-6"></div>
+      <div id="role-picker" class="grid grid-cols-2 gap-2 mb-6"></div>
       <button onclick="login()" class="w-full bg-brand-800 hover:bg-brand-900 text-white font-bold py-3 rounded-xl transition">دخول</button>
       <p class="text-xs text-slate-400 mt-6 text-center leading-relaxed">في الإصدار الإنتاجي: مصادقة عبر Supabase Auth<br>مع سياسات RLS لكل دور</p>
     </div>
@@ -503,9 +503,10 @@ const USERS = [
   {id:'u1', name:'خالد العصيمي',  email:'admin@alareen.sa',    role:'admin',    title:'مدير النظام'},
   {id:'u2', name:'سارة الدوسري',  email:'reviewer@alareen.sa', role:'reviewer', title:'محاسبة مراجعة'},
   {id:'u3', name:'محمد الشمري',   email:'m.shamri@alareen.sa', role:'reviewer', title:'محاسب مراجع'},
-  {id:'u4', name:'نورة القحطاني', email:'viewer@alareen.sa',   role:'viewer',   title:'مطّلع — إدارة المشاريع'}
+  {id:'u4', name:'نورة القحطاني', email:'viewer@alareen.sa',   role:'viewer',   title:'مطّلع — إدارة المشاريع'},
+  {id:'u5', name:'ياسر الحربي',   email:'engineer@alareen.sa', role:'engineer', title:'مهندس موقع — أبراج العرين'}
 ];
-const ROLE_AR = {admin:'مدير', reviewer:'محاسب مراجع', viewer:'مطّلع'};
+const ROLE_AR = {admin:'مدير', reviewer:'محاسب مراجع', engineer:'مهندس موقع', viewer:'مطّلع'};
 
 const PROJECTS = [
   {id:'P-001', name:'أبراج العرين السكنية', nameEn:'Al Areen Residential Towers', city:'الرياض', client:'شركة العرين للتطوير العقاري', start:'2025-02-01', end:'2027-01-31', budget:48000000},
@@ -560,7 +561,9 @@ const FLAGS = {
   unit_mismatch:        {ar:'وحدة القياس لا تطابق العقد',        cat:'بنود',         sev:'blocking'},
   boq_unmatched:        {ar:'بند غير مطابق لجدول الكميات',       cat:'بنود',         sev:'blocking'},
   contract_not_found:   {ar:'لا يوجد عقد مطابق',                cat:'بنود',         sev:'blocking'},
-  contract_expired:     {ar:'تاريخ الفاتورة خارج مدة العقد',     cat:'بنود',         sev:'warning'}
+  contract_expired:     {ar:'تاريخ الفاتورة خارج مدة العقد',     cat:'بنود',         sev:'warning'},
+  qty_not_delivered:    {ar:'الكمية المفوترة تتجاوز المُسلَّم المعتمد', cat:'التسليم',  sev:'blocking'},
+  dn_missing:           {ar:'لا يوجد إشعار تسليم معتمد مرتبط بالفاتورة', cat:'التسليم', sev:'blocking'}
 };
 
 const STATUS = {
@@ -580,15 +583,15 @@ const L = (code,cid,qty,price,total,extra={}) => {
 };
 
 const INVOICES = [
- {id:'INV-1041', sub:'S-01', contract:'C-2025-014', proj:'P-001', date:'2026-01-12', status:'approved', vat:'310234567800003', qr:true, conf:0.96,
+ {id:'INV-1041', dn:['DN-2026-028'], approvedAt:'2026-01-20', sub:'S-01', contract:'C-2025-014', proj:'P-001', date:'2026-01-12', status:'approved', vat:'310234567800003', qr:true, conf:0.96,
   lines:[L('CN-001','C-2025-014',1200,285),L('CN-003','C-2025-014',4500,62.5),L('CN-005','C-2025-014',3000,22.75)],
   subtotal:691500, vatAmt:103725, total:795225, flags:[], hash:'a91f…6c2d'},
 
- {id:'INV-1042', sub:'S-01', contract:'C-2025-014', proj:'P-001', date:'2026-02-09', status:'paid', vat:'310234567800003', qr:true, conf:0.94,
+ {id:'INV-1042', dn:['DN-2026-029'], approvedAt:'2026-02-15', paidRun:'PAY-2026-005', sub:'S-01', contract:'C-2025-014', proj:'P-001', date:'2026-02-09', status:'paid', vat:'310234567800003', qr:true, conf:0.94,
   lines:[L('CN-002','C-2025-014',120,3150),L('CN-004','C-2025-014',1800,48)],
   subtotal:464400, vatAmt:69660, total:534060, flags:[], hash:'7d3b…91af'},
 
- {id:'INV-1042', dupOf:'INV-1042', key:'INV-1042-R', sub:'S-01', contract:'C-2025-014', proj:'P-001', date:'2026-02-27', status:'flagged', vat:'310234567800003', qr:true, conf:0.93,
+ {id:'INV-1042', dupOf:'INV-1042', key:'INV-1042-R', dn:['DN-2026-029'], sub:'S-01', contract:'C-2025-014', proj:'P-001', date:'2026-02-27', status:'flagged', vat:'310234567800003', qr:true, conf:0.93,
   lines:[L('CN-002','C-2025-014',120,3150),L('CN-004','C-2025-014',1800,48)],
   subtotal:464400, vatAmt:69660, total:534060, hash:'7d3b…91af',
   flags:[
@@ -596,7 +599,7 @@ const INVOICES = [
     {t:'duplicate_file_hash', d:'بصمة الملف (SHA-256) مطابقة تماماً لملف الفاتورة INV-1042.', ref:'INV-1042', score:1.00}
   ]},
 
- {id:'INV-1055', sub:'S-01', contract:'C-2025-014', proj:'P-001', date:'2026-03-11', status:'flagged', vat:'310234567800003', qr:true, conf:0.91,
+ {id:'INV-1055', dn:['DN-2026-030'], sub:'S-01', contract:'C-2025-014', proj:'P-001', date:'2026-03-11', status:'flagged', vat:'310234567800003', qr:true, conf:0.91,
   lines:[L('CN-002','C-2025-014',95,3420,324900,{issue:'unit_price_deviation'}),L('CN-001','C-2025-014',800,285)],
   subtotal:552900, vatAmt:82935, total:635835, hash:'e5c8…22b1',
   flags:[
@@ -604,14 +607,14 @@ const INVOICES = [
     {t:'price_drift', line:'CN-002', d:'آخر سعر معتمد لهذا البند من نفس المورد كان ٣٬١٥٠٫٠٠ ر.س بتاريخ ٠٩ فبراير ٢٠٢٦.', contracted:3150, invoiced:3420}
   ]},
 
- {id:'INV-1061', sub:'S-01', contract:'C-2025-014', proj:'P-001', date:'2026-04-08', status:'flagged', vat:'310234567800003', qr:true, conf:0.95,
+ {id:'INV-1061', dn:['DN-2026-031'], sub:'S-01', contract:'C-2025-014', proj:'P-001', date:'2026-04-08', status:'flagged', vat:'310234567800003', qr:true, conf:0.95,
   lines:[L('CN-001','C-2025-014',600,285,171000,{issue:'qty_overrun'}),L('CN-003','C-2025-014',2000,62.5)],
   subtotal:296000, vatAmt:44400, total:340400, hash:'b12e…7f40',
   flags:[
     {t:'qty_overrun', line:'CN-001', d:'الكمية التعاقدية ٨٬٥٠٠ م٣ — المفوتر سابقاً ٨٬١٢٠ م٣ — هذه الفاتورة ٦٠٠ م٣ — الإجمالي ٨٬٧٢٠ م٣ (تجاوز ٢٢٠ م٣ بنسبة ٢٫٥٩٪).', contracted:8500, prior:8120, current:600}
   ]},
 
- {id:'INV-1068', sub:'S-01', contract:'C-2025-014', proj:'P-001', date:'2026-05-10', status:'flagged', vat:'310234567800003', qr:true, conf:0.88,
+ {id:'INV-1068', dn:['DN-2026-032'], sub:'S-01', contract:'C-2025-014', proj:'P-001', date:'2026-05-10', status:'flagged', vat:'310234567800003', qr:true, conf:0.88,
   lines:[L('CN-004','C-2025-014',850,48,41000,{issue:'line_arithmetic_error'}),L('CN-005','C-2025-014',1500,22.75)],
   subtotal:75125, vatAmt:11268.75, total:86400, hash:'3aa9…d5e7',
   flags:[
@@ -619,11 +622,11 @@ const INVOICES = [
     {t:'totals_mismatch', d:'المجموع قبل الضريبة ٧٥٬١٢٥٫٠٠ + الضريبة ١١٬٢٦٨٫٧٥ = ٨٦٬٣٩٣٫٧٥ ر.س بينما الإجمالي المدوّن ٨٦٬٤٠٠٫٠٠ ر.س (فرق ٦٫٢٥ ر.س).'}
   ]},
 
- {id:'INV-2210', sub:'S-02', contract:'C-2025-027', proj:'P-002', date:'2026-02-20', status:'archived', vat:'300112233400003', qr:true, conf:0.97,
+ {id:'INV-2210', dn:['DN-2026-027'], approvedAt:'2026-02-26', paidRun:'PAY-2026-005', sub:'S-02', contract:'C-2025-027', proj:'P-002', date:'2026-02-20', status:'archived', vat:'300112233400003', qr:true, conf:0.97,
   lines:[L('EL-101','C-2025-027',950,118),L('EL-104','C-2025-027',2200,14.25)],
   subtotal:143450, vatAmt:21517.5, total:164967.5, flags:[], hash:'c4f1…08bd'},
 
- {id:'INV-2231', sub:'S-02', contract:'C-2025-027', proj:'P-002', date:'2026-03-25', status:'flagged', vat:'300112233400003', qr:false, conf:0.86,
+ {id:'INV-2231', dn:['DN-2026-033'], sub:'S-02', contract:'C-2025-027', proj:'P-002', date:'2026-03-25', status:'flagged', vat:'300112233400003', qr:false, conf:0.86,
   lines:[L('EL-103','C-2025-027',620,95),L('EL-102','C-2025-027',2,18500)],
   subtotal:95900, vatAmt:14385, total:110285, hash:'9b70…4a13',
   flags:[
@@ -631,15 +634,16 @@ const INVOICES = [
     {t:'vat_unverified', d:'لم يتم بعد التحقق من الرقم الضريبي ٣٠٠١١٢٢٣٣٤٠٠٠٠٣ عبر بوابة "الاستعلام عن مكلف" لدى هيئة الزكاة والضريبة والجمارك.'}
   ]},
 
- {id:'INV-2245', sub:'S-02', contract:'C-2025-027', proj:'P-002', date:'2026-04-22', status:'flagged', vat:'300112233400003', qr:true, conf:0.93,
+ {id:'INV-2245', dn:['DN-2026-035'], sub:'S-02', contract:'C-2025-027', proj:'P-002', date:'2026-04-22', status:'flagged', vat:'300112233400003', qr:true, conf:0.93,
   lines:[L('EL-103','C-2025-027',540,104,56160,{issue:'unit_price_deviation'}),L('EL-104','C-2025-027',1800,14.25)],
   subtotal:81810, vatAmt:12271.5, total:94081.5, hash:'6e2a…bb95',
   flags:[
     {t:'unit_price_deviation', line:'EL-103', d:'السعر التعاقدي ٩٥٫٠٠ ر.س / نقطة — السعر المفوتر ١٠٤٫٠٠ ر.س / نقطة.', contracted:95, invoiced:104},
-    {t:'price_drift', line:'EL-103', d:'ارتفاع ٩٫٤٧٪ عن آخر سعر معتمد (٩٥٫٠٠ ر.س بتاريخ ٢٥ مارس ٢٠٢٦).', contracted:95, invoiced:104}
+    {t:'price_drift', line:'EL-103', d:'ارتفاع ٩٫٤٧٪ عن آخر سعر معتمد (٩٥٫٠٠ ر.س بتاريخ ٢٥ مارس ٢٠٢٦).', contracted:95, invoiced:104},
+    {t:'qty_not_delivered', line:'EL-103', d:'الكمية المفوترة ٥٤٠ نقطة تتجاوز الكمية المُسلَّمة المعتمدة في إشعار التسليم DN-2026-035 وهي ٤٨٠ نقطة (فرق ٦٠ نقطة).', ref_dn:'DN-2026-035', delivered:480, invoiced_qty:540}
   ]},
 
- {id:'INV-2260', sub:'S-02', contract:'C-2025-027', proj:'P-002', date:'2026-05-19', status:'ocr_review', vat:'300112233400003', qr:true, conf:0.54,
+ {id:'INV-2260', dn:['DN-2026-034'], sub:'S-02', contract:'C-2025-027', proj:'P-002', date:'2026-05-19', status:'ocr_review', vat:'300112233400003', qr:true, conf:0.54,
   lines:[L('EL-101','C-2025-027',480,118,56640,{conf:0.61}),L('EL-104','C-2025-027',1360,14.25,19380,{conf:0.42})],
   subtotal:76020, vatAmt:11403, total:87423, flags:[], hash:'f087…3c6e', lowConf:true},
 
@@ -649,7 +653,8 @@ const INVOICES = [
   flags:[
     {t:'vat_format_invalid', d:'الرقم الضريبي المستخرج ٣١٠٩٩٨٨٧٧٦٠٠٠٣ يتكون من ١٤ خانة — المطلوب ١٥ خانة تبدأ وتنتهي بالرقم ٣.'},
     {t:'contract_not_found', d:'لا يوجد عقد ساري مسجّل للمقاول "مؤسسة الإنشاءات الوطنية" يغطي هذه الفاتورة.'},
-    {t:'boq_unmatched', line:'—', d:'البند "أعمال تشطيبات متنوعة حسب المرفق" لا يمكن مطابقته بأي بند في جدول الكميات.'}
+    {t:'boq_unmatched', line:'—', d:'البند "أعمال تشطيبات متنوعة حسب المرفق" لا يمكن مطابقته بأي بند في جدول الكميات.'},
+    {t:'dn_missing', d:'لم يُربط بالفاتورة أي إشعار تسليم معتمد — لا يمكن إثبات أن الأعمال سُلِّمت فعلاً.'}
   ]}
 ];
 const invKey = i => i.key || i.id;
@@ -707,6 +712,11 @@ const SETTINGS = [
   {k:'حد الثقة المنخفضة في الاستخراج', v:'٠٫٧٥', key:'ocr_low_confidence'},
   {k:'حد الثقة الحرجة (حاجب)', v:'٠٫٥٠', key:'ocr_critical_confidence'},
   {k:'مدة حفظ السجلات', v:'٦ سنوات', key:'record_retention_years'},
+  {k:'حد شذوذ معدل الإنجاز في إشعار التسليم', v:'٣ أضعاف المعدل المتوقع', key:'dn_progress_anomaly_factor'},
+  {k:'الحد الأدنى لأدلة التسليم', v:'صور مؤرخة بموقع جغرافي + تقرير فحص', key:'dn_min_evidence'},
+  {k:'اعتماد إضافي لإشعار التسليم فوق', v:'٥٠٠٬٠٠٠ ر.س — مدير العقود', key:'dn_second_approval_above'},
+  {k:'شروط السداد الافتراضية', v:'٣٠ يوماً من اعتماد الفاتورة', key:'payment_terms_days'},
+  {k:'اعتماد دفعة السداد', v:'المدير المالي', key:'payment_run_approver'},
   {k:'الحد الأدنى لعروض الأسعار', v:'٣ عروض', key:'proc_min_quotes'},
   {k:'حد اجتياز التقييم الفني', v:'٧٠٪', key:'proc_tech_pass_pct'},
   {k:'وزن التقييم الفني / التجاري', v:'٦٠٪ / ٤٠٪', key:'proc_weights'},
@@ -719,9 +729,11 @@ const can = w => w==='view' ? true : ME.role!=='viewer' && (w!=='admin' || ME.ro
 
 const NAV = [
   {k:'dashboard', ar:'لوحة المعلومات', en:'Dashboard', icon:'M3 12h6v9H3zM10 3h6v18h-6zM17 8h4v13h-4z'},
-  {k:'invoices',  ar:'الفواتير',       en:'Invoices',  icon:'M6 2h9l5 5v15H6zM15 2v5h5'},
-  {k:'procurement', ar:'المشتريات', en:'Procurement', icon:'M3 4h2l2.5 11h11L21 7H7M9 20a1 1 0 100-2 1 1 0 000 2zm8 0a1 1 0 100-2 1 1 0 000 2z'},
   {k:'contracts', ar:'العقود وجداول الكميات', en:'Contracts & BoQ', icon:'M7 3h10v18l-5-3-5 3zM9 8h6M9 12h6'},
+  {k:'deliveries', ar:'إشعارات التسليم', en:'Delivery Notes', icon:'M3 7h11v10H3zM14 10h4l3 3v4h-7zM7 20a1.5 1.5 0 100-3 1.5 1.5 0 000 3zm10 0a1.5 1.5 0 100-3 1.5 1.5 0 000 3z'},
+  {k:'invoices',  ar:'الفواتير',       en:'Invoices',  icon:'M6 2h9l5 5v15H6zM15 2v5h5'},
+  {k:'payments',  ar:'المدفوعات',      en:'Payments',  icon:'M3 6h18v12H3zM3 10h18M7 15h3'},
+  {k:'procurement', ar:'المشتريات', en:'Procurement', icon:'M3 4h2l2.5 11h11L21 7H7M9 20a1 1 0 100-2 1 1 0 000 2zm8 0a1 1 0 100-2 1 1 0 000 2z'},
   {k:'subs',      ar:'مقاولو الباطن',  en:'Subcontractors', icon:'M12 12a4 4 0 100-8 4 4 0 000 8zM4 21a8 8 0 0116 0'},
   {k:'projects',  ar:'المشاريع',       en:'Projects',  icon:'M3 21h18M5 21V8l7-5 7 5v13M10 21v-6h4v6'},
   {k:'archive',   ar:'الأرشيف والبحث', en:'Archive & Search', icon:'M3 7h18v13H3zM3 3h18v4H3zM10 12h4'},
@@ -735,7 +747,7 @@ document.getElementById('login-modules').innerHTML =
  ['استلام الفواتير و OCR','التحقق الضريبي — ZATCA','كشف الفواتير المكررة','سجل العقود وجداول الكميات','مطابقة بنود BoQ والأسعار','الأرشفة والبحث بالعربية']
  .map(m=>`<div class="bg-white/10 rounded-lg px-3 py-2">${m}</div>`).join('');
 
-document.getElementById('role-picker').innerHTML = ['admin','reviewer','viewer'].map((r,i)=>
+document.getElementById('role-picker').innerHTML = ['admin','reviewer','engineer','viewer'].map((r,i)=>
  `<button data-r="${r}" onclick="pickRole('${r}')" class="role-btn text-xs font-bold rounded-lg py-2.5 border ${i===0?'border-brand-700 bg-brand-50 text-brand-800':'border-slate-300 text-slate-600'}">${ROLE_AR[r]}</button>`).join('');
 
 function pickRole(r){
@@ -790,10 +802,12 @@ const PAGES = {};
 /* one contextual "add" action per screen — shown active for the roles allowed
    to perform it, disabled (with an explanation) for others, hidden for viewers */
 const PRIMARY = {
-  dashboard:['رفع فاتورة','openUpload()',['admin','reviewer']],
-  invoices: ['رفع فاتورة','openUpload()',['admin','reviewer']],
+  dashboard:['رفع فاتورة','openUpload()',['admin','reviewer','engineer']],
+  invoices: ['رفع فاتورة','openUpload()',['admin','reviewer','engineer']],
   procurement: ['طلب شراء جديد','openNewPR()',['admin','reviewer']],
-  archive:  ['رفع فاتورة','openUpload()',['admin','reviewer']],
+  archive:  ['رفع فاتورة','openUpload()',['admin','reviewer','engineer']],
+  deliveries:['إشعار تسليم جديد','openNewDN()',['admin','engineer']],
+  payments: ['دفعة سداد جديدة','openNewRun()',['admin','reviewer']],
   contracts:['عقد جديد','openNewContract()',['admin']],
   subs:     ['مقاول باطن جديد','openNewSub()',['admin']],
   projects: ['مشروع جديد','openNewProject()',['admin']],
@@ -806,7 +820,7 @@ function primaryBtn(k, cls){
   const plus = '<svg class="w-4 h-4" fill="none" stroke="currentColor" stroke-width="2.2" viewBox="0 0 24 24"><path d="M12 5v14M5 12h14"/></svg>';
   return roles.includes(ME.role)
     ? `<button onclick="${fn}" class="${cls||'bg-brand-800 hover:bg-brand-900 text-white text-sm font-bold rounded-xl px-4 py-2'} flex items-center gap-1.5">${plus}${label}</button>`
-    : `<button onclick="toast('هذا الإجراء يتطلب صلاحية مدير النظام')" title="يتطلب صلاحية مدير" class="bg-slate-200 text-slate-400 text-sm font-bold rounded-xl px-4 py-2 flex items-center gap-1.5 cursor-not-allowed">${plus}${label}</button>`;
+    : `<button onclick="toast('هذا الإجراء غير متاح لدورك الحالي')" title="غير متاح لهذا الدور" class="bg-slate-200 text-slate-400 text-sm font-bold rounded-xl px-4 py-2 flex items-center gap-1.5 cursor-not-allowed">${plus}${label}</button>`;
 }
 function renderPrimary(k){ document.getElementById('primary-action').innerHTML = primaryBtn(k); }
 
@@ -870,7 +884,18 @@ PAGES.dashboard = () => {
   });
   const maxV = Math.max(...byProject.map(x=>x.v),1);
 
+  const readyNet = INVOICES.filter(i=>i.status==='approved').reduce((a,i)=>a+deductions(i).net,0);
   return `
+  <div class="bg-white rounded-2xl border border-slate-200 p-4 mb-6 flex items-center gap-2 flex-wrap text-xs">
+    <span class="font-bold text-slate-600">مسار العمل:</span>
+    ${[['العقد','contracts'],['إشعار التسليم','deliveries'],['التحقق الآلي من التسليم','deliveries'],['اعتماد التسليم','deliveries'],['الفاتورة','invoices'],['التحقق والاعتماد','invoices'],['جاهز للدفع','payments'],['السداد','payments']].map((x,ix,arr)=>`<button onclick="go('${x[1]}')" class="flex items-center gap-1.5 hover:underline"><span class="w-5 h-5 rounded-full bg-brand-800 text-white flex items-center justify-center text-[10px] font-extrabold">${ix+1}</span>${x[0]}</button>${ix<arr.length-1?'<span class="text-slate-300">←</span>':''}`).join('')}
+  </div>
+  <div class="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-4 gap-4 mb-6">
+    ${card('إشعارات تسليم بانتظار الاعتماد', fmtNum(DNS.filter(d=>d.status==='clean').length), `${fmtNum(DNS.filter(d=>d.status==='flagged').length)} إشعار مُعلَّم بالتحقق الآلي`,'amber')}
+    ${card('معتمدة بانتظار الفوترة', fmtNum(DNS.filter(d=>d.status==='approved'&&!d.invoice).length), fmtMoney(DNS.filter(d=>d.status==='approved'&&!d.invoice).reduce((a,d)=>a+dnValue(d),0)),'brand')}
+    ${card('جاهز للدفع (صافي)', fmtMoney(readyNet), `${fmtNum(INVOICES.filter(i=>i.status==='approved').length)} فاتورة معتمدة بعد الاستقطاعات`,'brand')}
+    ${card('مستحق خلال ٧ أيام', fmtMoney(INVOICES.filter(i=>i.status==='approved'&&daysUntil(dueDate(i))<=7).reduce((a,i)=>a+deductions(i).net,0)), `${fmtNum(PAYRUNS.filter(r=>r.status==='pending_approval').length)} دفعة سداد بانتظار الاعتماد`,'red')}
+  </div>
   <div class="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-4 gap-4 mb-6">
     ${card('بانتظار مراجعة الاستخراج', fmtNum(pending), 'فواتير ثقة استخراجها منخفضة','amber')}
     ${card('فواتير مُعلَّمة', fmtNum(flagged), 'محجوبة عن الصرف حتى المعالجة','red')}
@@ -1033,9 +1058,10 @@ PAGES.users = () => section('المستخدمون والصلاحيات', `<div c
   <tbody>${USERS.map(u=>`<tr>
     <td><div class="font-bold">${u.name}</div><div class="text-xs text-slate-400">${u.title}</div></td>
     <td class="text-slate-600" dir="ltr">${u.email}</td>
-    <td><span class="text-xs font-bold px-2.5 py-1 rounded-full ${u.role==='admin'?'bg-brand-100 text-brand-800':u.role==='reviewer'?'bg-blue-100 text-blue-700':'bg-slate-100 text-slate-600'}">${ROLE_AR[u.role]}</span></td>
-    <td class="text-xs text-slate-500">${u.role==='admin'?'كل الصلاحيات · إدارة العقود والإعدادات والمستخدمين'
-      :u.role==='reviewer'?'رفع الفواتير · تصحيح الاستخراج · معالجة الملاحظات · الاعتماد للدفع'
+    <td><span class="text-xs font-bold px-2.5 py-1 rounded-full ${u.role==='admin'?'bg-brand-100 text-brand-800':u.role==='reviewer'?'bg-blue-100 text-blue-700':u.role==='engineer'?'bg-amber-100 text-amber-800':'bg-slate-100 text-slate-600'}">${ROLE_AR[u.role]}</span></td>
+    <td class="text-xs text-slate-500">${u.role==='admin'?'كل الصلاحيات · إدارة العقود والإعدادات والمستخدمين · اعتماد إشعارات التسليم وأوامر الشراء ودفعات السداد'
+      :u.role==='reviewer'?'رفع الفواتير · تصحيح الاستخراج · معالجة الملاحظات · الاعتماد للدفع · إعداد دفعات السداد'
+      :u.role==='engineer'?'إعداد إشعارات التسليم وإرفاق الأدلة · رفع فواتير المقاول من الإشعارات المعتمدة · لا يعتمد ولا يصرف'
       :'اطّلاع فقط — لا توجد أي صلاحية تعديل'}</td>
   </tr>`).join('')}</tbody></table></div>`, primaryBtn('users',BTN_SM));
 
@@ -1176,8 +1202,10 @@ function openUpload(){
         </div>`).join('')}
     </div>
     <div class="bg-amber-50 border border-amber-200 rounded-xl p-4 text-sm text-amber-900">
-      <b>ما يحدث بعد الرفع:</b> يُحسب بصمة الملف (SHA-256) والبصمة البصرية للصورة لكشف إعادة الرفع، ثم يمر الملف على طبقة الاستخراج
-      (طبقة نص PDF ← Tesseract ← نموذج رؤية اختياري) وينتقل إلى شاشة مراجعة الاستخراج قبل الحفظ.
+      <b>إشعارات التسليم المعتمدة غير المفوترة</b> — تُربط الفاتورة بها ويُتحقق أن كمياتها لا تتجاوز المُسلَّم المعتمد:
+      <div class="mt-2 space-y-1.5">${DNS.filter(d=>d.status==='approved'&&!d.invoice).map(d=>`<label class="flex items-center gap-2 bg-white border border-amber-200 rounded-lg px-3 py-2"><input type="checkbox" checked class="w-4 h-4"><span class="flex-1"><b>${d.id}</b> · ${conOf(d.contract).id} · ${d.period} · ${fmtMoney(dnValue(d))}</span><button onclick="event.preventDefault();openDN('${d.id}')" class="text-[11px] text-brand-700 font-bold">فتح</button></label>`).join('')||'<div class="text-slate-500">لا توجد إشعارات معتمدة بانتظار الفوترة</div>'}</div>
+      <div class="mt-3"><b>ما يحدث بعد الرفع:</b> يُحسب بصمة الملف (SHA-256) والبصمة البصرية للصورة لكشف إعادة الرفع، ثم يمر الملف على طبقة الاستخراج
+      (طبقة نص PDF ← Tesseract ← نموذج رؤية اختياري) وينتقل إلى شاشة مراجعة الاستخراج قبل الحفظ.</div>
     </div>
   </div>
   <div class="px-6 py-4 border-t border-slate-200 flex justify-end gap-2 shrink-0">
@@ -1358,6 +1386,7 @@ function invTab(i,s,c){
         ${[['الحالة',badge(i.status)],['مقاول الباطن',s.name],['الرقم الضريبي',i.vat],['السجل التجاري',s.cr],
            ['العقد',c?`${c.id} — ${c.title}`:'<span class="text-red-600 font-bold">لا يوجد عقد مطابق</span>'],
            ['المشروع',i.proj?projOf(i.proj).name:'—'],['تاريخ الفاتورة',dtBoth(i.date)],
+           ['إشعارات التسليم',(i.dn&&i.dn.length)?i.dn.map(d=>`<button onclick="openDN('${d}')" class="text-xs font-bold text-brand-700 border border-brand-200 bg-brand-50 rounded px-2 py-0.5 hover:underline">${d}</button>`).join(' '):'<span class="text-red-600 font-bold">لا يوجد</span>'],
            ['بصمة الملف',`<span dir="ltr" class="text-xs">SHA-256 ${i.hash}</span>`],
            ['ثقة الاستخراج',confBar(i.conf)]].map(([k2,v])=>
            `<div class="flex justify-between gap-3 border-b border-slate-100 pb-1.5"><span class="text-slate-500">${k2}</span><span class="font-semibold text-left">${v}</span></div>`).join('')}
@@ -1375,16 +1404,18 @@ function invTab(i,s,c){
 
   if(TAB==='lines'){
     return `<div class="tbl-wrap"><table class="tbl w-full text-sm">
-      <thead><tr><th>رمز البند</th><th>الوصف</th><th>الوحدة</th><th>الكمية</th><th>سعر الوحدة</th><th>سعر العقد</th><th>الفرق</th><th>الإجمالي</th><th>المطابقة</th><th></th></tr></thead>
+      <thead><tr><th>رمز البند</th><th>الوصف</th><th>الوحدة</th><th>الكمية</th><th>المُسلَّم المعتمد</th><th>سعر الوحدة</th><th>سعر العقد</th><th>الفرق</th><th>الإجمالي</th><th>المطابقة</th><th></th></tr></thead>
       <tbody>${i.lines.map(l=>{
         const b = i.contract? boqItem(i.contract,l.code) : null;
         const dev = b? l.price-b.price : 0;
         const pct = b&&b.price? dev/b.price*100 : 0;
+        const dl = deliveredForInvoice(i,l.code);
         return `<tr class="${l.issue?'bg-red-50/60':''}">
           <td class="font-bold ${l.match==='unmatched'?'text-red-600':'text-brand-800'}">${l.code}</td>
           <td class="max-w-xs">${l.desc}</td>
           <td>${l.unit}</td>
           <td>${fmtNum(l.qty)}</td>
+          <td class="${dl===null?'text-red-600 font-bold':l.qty>dl?'text-red-600 font-bold':'text-emerald-700'}">${dl===null?'لا إشعار':fmtNum(dl)+(l.qty>dl?' ⚠':' ✓')}</td>
           <td class="font-semibold ${dev?'text-red-600':''}">${fmtNum(l.price)}</td>
           <td class="text-slate-500">${b?fmtNum(b.price):'—'}</td>
           <td class="${dev>0?'text-red-600 font-bold':dev<0?'text-amber-600 font-bold':'text-slate-400'}">${b?(dev?((dev>0?'+':'')+fmtNum(dev)+' ('+(dev>0?'+':'')+fmtPct(pct)+')'):'—'):'—'}</td>
@@ -1392,7 +1423,7 @@ function invTab(i,s,c){
           <td class="text-xs ${l.match==='unmatched'?'text-red-600 font-bold':'text-slate-500'}">${l.match==='unmatched'?'غير مطابق':'رمز البند'}</td>
           <td class="text-left">${b?`<button onclick="openPrice('${l.code}')" class="text-xs text-brand-700 font-bold hover:underline whitespace-nowrap">تاريخ السعر</button>`:''}</td>
         </tr>`}).join('')}</tbody>
-      <tfoot><tr class="bg-slate-50 font-extrabold"><td colspan="7">مجموع البنود</td><td>${fmtMoney(i.lines.reduce((a,l)=>a+l.total,0))}</td><td colspan="2"></td></tr></tfoot>
+      <tfoot><tr class="bg-slate-50 font-extrabold"><td colspan="8">مجموع البنود</td><td>${fmtMoney(i.lines.reduce((a,l)=>a+l.total,0))}</td><td colspan="2"></td></tr></tfoot>
     </table></div>
     ${i.contract? `<div class="p-5"><h4 class="font-extrabold text-brand-800 mb-3">الكميات التراكمية مقابل العقد</h4>
       <div class="space-y-3">${i.lines.filter(l=>boqItem(i.contract,l.code)).map(l=>{
@@ -1457,6 +1488,7 @@ function invTab(i,s,c){
                 ${m.cat==='ضريبية'?'<option>تم التحقق من المكلف لدى الهيئة</option><option>طلب فاتورة ضريبية نظامية من المورد</option>':''}
                 ${m.cat==='حسابية'?'<option>تم التصحيح بالاتفاق مع المورد</option><option>رفض — إعادة إصدار الفاتورة</option>':''}
                 ${m.cat==='بنود'?'<option>مطابقة يدوية ببند جدول الكميات</option><option>خارج نطاق العقد — رفض</option>':''}
+                ${m.cat==='التسليم'?'<option>ربط بإشعار تسليم معتمد إضافي</option><option>الكمية الزائدة تُرحَّل للفاتورة القادمة — تعديل الفاتورة</option><option>رفض — لا يوجد تسليم معتمد</option>':''}
               </select>
               <input type="text" placeholder="ملاحظة إلزامية تُحفظ في سجل التدقيق" class="border border-slate-300 rounded-lg px-3 py-2 text-xs flex-1 min-w-[200px]">
             </div>
@@ -1565,9 +1597,9 @@ function rejectInvoice(k){
 }
 function approveInvoice(k){
   const i=findInv(k); if(blockingOpen(i)||FINAL.includes(i.status)) return;
-  i.status='approved';
-  logAudit('اعتماد للدفع', i.id, 'لا توجد ملاحظات حاجبة — اعتُمدت للصرف'); addEvent(i,'الاعتماد للدفع','لا توجد ملاحظات حاجبة');
-  toast('اعتُمدت الفاتورة للدفع'); closeModal(); go(CURRENT);
+  i.status='approved'; i.approvedAt=new Date().toISOString().slice(0,10);
+  logAudit('اعتماد للدفع', i.id, 'لا توجد ملاحظات حاجبة — اعتُمدت للصرف وأُدرجت في قائمة جاهز للدفع'); addEvent(i,'الاعتماد للدفع','لا توجد ملاحظات حاجبة — أُدرجت في جاهز للدفع');
+  toast('اعتُمدت الفاتورة — أُدرجت في قائمة جاهز للدفع'); closeModal(); go(CURRENT);
 }
 function attestZatca(k, el){
   const i=findInv(k), box=el.closest('.zbox');
@@ -1704,7 +1736,7 @@ function openContract(id){
       <button onclick="openBoqImport(1,'${c.id}')" data-role="admin" class="text-xs font-bold text-brand-700 border border-brand-200 bg-brand-50 rounded-lg px-3 py-1.5">استيراد / تحديث من Excel</button>
     </div>
     <div class="tbl-wrap"><table class="tbl w-full text-sm">
-      <thead><tr><th>الرمز</th><th>الوصف</th><th>الوحدة</th><th>الكمية التعاقدية</th><th>سعر الوحدة</th><th>القيمة</th><th>المفوتر</th><th>نسبة التنفيذ</th><th></th></tr></thead>
+      <thead><tr><th>الرمز</th><th>الوصف</th><th>الوحدة</th><th>الكمية التعاقدية</th><th>سعر الوحدة</th><th>القيمة</th><th>المُسلَّم المعتمد</th><th>نسبة التنفيذ</th><th></th></tr></thead>
       <tbody>${items.map(b=>{
         const pct = b.invoicedQty/b.qty*100, over = pct>100;
         return `<tr>
@@ -2035,6 +2067,435 @@ function saveNewUser(){
   const u={id:'u'+(USERS.length+1), name:f.name, email:f.email, role:f.role, title:f.title||ROLE_AR[f.role]};
   USERS.push(u); logAudit('دعوة مستخدم', u.id, `${u.name} — ${u.email} — ${ROLE_AR[u.role]}`);
   toast(`أُرسلت الدعوة إلى ${u.email}`); closeModal(); go('users');
+}
+
+/* ═══════════════════════════════════════════════════════════════════════════
+   DELIVERY NOTES — إشعارات التسليم: المهندس يقدّم ← تحقق آلي من التسليم ← اعتماد
+   ═══════════════════════════════════════════════════════════════════════════ */
+const DN_STATUS = {
+  draft:    {ar:'مسودة',                 cls:'bg-slate-100 text-slate-700'},
+  flagged:  {ar:'مُعلَّم بالتحقق الآلي',  cls:'bg-red-100 text-red-700'},
+  clean:    {ar:'بانتظار الاعتماد',       cls:'bg-amber-100 text-amber-800'},
+  approved: {ar:'معتمد',                 cls:'bg-emerald-100 text-emerald-700'},
+  returned: {ar:'مُعاد للمهندس',          cls:'bg-slate-200 text-slate-600'},
+  rejected: {ar:'مرفوض',                 cls:'bg-slate-200 text-slate-600'}
+};
+const DN_FLAGS = {
+  dn_qty_overrun:      {ar:'الكمية التراكمية تتجاوز الكمية التعاقدية',            sev:'blocking'},
+  dn_progress_anomaly: {ar:'معدل الإنجاز غير معتاد مقارنة بالمتوقع',              sev:'warning'},
+  dn_evidence_missing: {ar:'لا توجد أدلة تسليم كافية (صور مؤرخة بموقع جغرافي)',    sev:'blocking'},
+  dn_no_inspection:    {ar:'لا يوجد تقرير فحص/استلام مرتبط',                      sev:'warning'},
+  dn_overlap:          {ar:'تداخل مع إشعار تسليم سابق لنفس البند والفترة',        sev:'blocking'},
+  dn_item_unmatched:   {ar:'بند غير موجود في جدول كميات العقد',                   sev:'blocking'},
+  dn_period_outside:   {ar:'فترة التسليم خارج مدة العقد',                         sev:'warning'}
+};
+const DN_RULES = { anomaly:3, secondApprovalAbove:500000 };
+/* evidence photos: date + GPS pair per photo */
+const ph = (n, from, gps) => Array.from({length:n},(_,i)=>{ const d=new Date(from+'T00:00:00'); d.setDate(d.getDate()+i*2); return {d:d.toISOString().slice(0,10), gps}; });
+const DNS = [
+ {id:'DN-2026-027', contract:'C-2025-027', sub:'S-02', proj:'P-002', from:'2026-01-20', to:'2026-02-18', date:'2026-02-19', by:'م. ياسر الحربي', status:'approved', invoice:'INV-2210',
+  lines:[{code:'EL-101',qty:950},{code:'EL-104',qty:2200}], evidence:{photos:ph(10,'2026-01-22','21.5433°N 39.1728°E'), inspection:'IR-102'}, flags:[],
+  approvals:[{role:'مدير المشروع',by:'خالد العصيمي',at:'2026-02-21 10:05'}], events:[['تقديم الإشعار','م. ياسر الحربي','2026-02-19 14:10','التحقق الآلي: لا ملاحظات'],['اعتماد مدير المشروع','خالد العصيمي','2026-02-21 10:05','']]},
+ {id:'DN-2026-028', contract:'C-2025-014', sub:'S-01', proj:'P-001', from:'2025-12-10', to:'2026-01-10', date:'2026-01-11', by:'م. ياسر الحربي', status:'approved', invoice:'INV-1041',
+  lines:[{code:'CN-001',qty:1200},{code:'CN-003',qty:4500},{code:'CN-005',qty:3000}], evidence:{photos:ph(14,'2025-12-12','24.7136°N 46.6753°E'), inspection:'IR-097'}, flags:[],
+  approvals:[{role:'مدير المشروع',by:'خالد العصيمي',at:'2026-01-12 09:30'},{role:'مدير العقود',by:'عبدالله العرين',at:'2026-01-13 11:00'}], events:[['تقديم الإشعار','م. ياسر الحربي','2026-01-11 16:00','التحقق الآلي: لا ملاحظات'],['اعتماد مدير المشروع','خالد العصيمي','2026-01-12 09:30',''],['اعتماد مدير العقود','عبدالله العرين','2026-01-13 11:00','قيمة الإشعار تتجاوز ٥٠٠ ألف']]},
+ {id:'DN-2026-029', contract:'C-2025-014', sub:'S-01', proj:'P-001', from:'2026-01-11', to:'2026-02-07', date:'2026-02-08', by:'م. ياسر الحربي', status:'approved', invoice:'INV-1042',
+  lines:[{code:'CN-002',qty:120},{code:'CN-004',qty:1800}], evidence:{photos:ph(9,'2026-01-14','24.7136°N 46.6753°E'), inspection:'IR-104'}, flags:[],
+  approvals:[{role:'مدير المشروع',by:'خالد العصيمي',at:'2026-02-09 12:40'}], events:[['تقديم الإشعار','م. ياسر الحربي','2026-02-08 15:20','التحقق الآلي: لا ملاحظات'],['اعتماد مدير المشروع','خالد العصيمي','2026-02-09 12:40','']]},
+ {id:'DN-2026-030', contract:'C-2025-014', sub:'S-01', proj:'P-001', from:'2026-02-15', to:'2026-03-08', date:'2026-03-09', by:'م. ياسر الحربي', status:'approved', invoice:'INV-1055',
+  lines:[{code:'CN-002',qty:95},{code:'CN-001',qty:800}], evidence:{photos:ph(8,'2026-02-17','24.7136°N 46.6753°E'), inspection:'IR-110'}, flags:[],
+  approvals:[{role:'مدير المشروع',by:'خالد العصيمي',at:'2026-03-10 09:15'}], events:[['تقديم الإشعار','م. ياسر الحربي','2026-03-09 11:00','التحقق الآلي: لا ملاحظات'],['اعتماد مدير المشروع','خالد العصيمي','2026-03-10 09:15','']]},
+ {id:'DN-2026-031', contract:'C-2025-014', sub:'S-01', proj:'P-001', from:'2026-03-10', to:'2026-04-04', date:'2026-04-05', by:'م. ياسر الحربي', status:'approved', invoice:'INV-1061',
+  lines:[{code:'CN-001',qty:600},{code:'CN-003',qty:2000}], evidence:{photos:ph(11,'2026-03-12','24.7136°N 46.6753°E'), inspection:'IR-118'},
+  flags:[{t:'dn_qty_overrun',line:'CN-001',d:'التعاقدي ٨٬٥٠٠ م³ — المُسلَّم المعتمد سابقاً ٨٬١٢٠ م³ — هذا الإشعار ٦٠٠ م³ — الإجمالي ٨٬٧٢٠ م³ (تجاوز ٢٢٠ م³).', contracted:8500, prior:8120, current:600, resolved:{by:'خالد العصيمي',at:'2026-04-06 10:20',reason:'الكمية الزائدة مغطاة بأمر تغيير قيد الإصدار',note:'VO-03 — زيادة كمية الخرسانة للأساسات بعد تعديل التربة'}}],
+  approvals:[{role:'مدير المشروع',by:'خالد العصيمي',at:'2026-04-06 10:25'}], events:[['تقديم الإشعار','م. ياسر الحربي','2026-04-05 13:30','التحقق الآلي: ملاحظة حاجبة واحدة'],['معالجة ملاحظة','خالد العصيمي','2026-04-06 10:20','تجاوز الكمية — VO-03'],['اعتماد مدير المشروع','خالد العصيمي','2026-04-06 10:25','']]},
+ {id:'DN-2026-032', contract:'C-2025-014', sub:'S-01', proj:'P-001', from:'2026-04-06', to:'2026-05-08', date:'2026-05-09', by:'م. ياسر الحربي', status:'approved', invoice:'INV-1068',
+  lines:[{code:'CN-004',qty:850},{code:'CN-005',qty:1500}], evidence:{photos:ph(7,'2026-04-08','24.7136°N 46.6753°E'), inspection:'IR-124'}, flags:[],
+  approvals:[{role:'مدير المشروع',by:'خالد العصيمي',at:'2026-05-10 08:50'}], events:[['تقديم الإشعار','م. ياسر الحربي','2026-05-09 12:00','التحقق الآلي: لا ملاحظات'],['اعتماد مدير المشروع','خالد العصيمي','2026-05-10 08:50','']]},
+ {id:'DN-2026-033', contract:'C-2025-027', sub:'S-02', proj:'P-002', from:'2026-03-01', to:'2026-03-20', date:'2026-03-22', by:'م. ياسر الحربي', status:'approved', invoice:'INV-2231',
+  lines:[{code:'EL-103',qty:620},{code:'EL-102',qty:2}], evidence:{photos:ph(6,'2026-03-03','21.5433°N 39.1728°E'), inspection:'IR-112'}, flags:[],
+  approvals:[{role:'مدير المشروع',by:'خالد العصيمي',at:'2026-03-23 10:00'}], events:[['تقديم الإشعار','م. ياسر الحربي','2026-03-22 09:40','التحقق الآلي: لا ملاحظات'],['اعتماد مدير المشروع','خالد العصيمي','2026-03-23 10:00','']]},
+ {id:'DN-2026-034', contract:'C-2025-027', sub:'S-02', proj:'P-002', from:'2026-04-21', to:'2026-05-15', date:'2026-05-17', by:'م. ياسر الحربي', status:'approved', invoice:'INV-2260',
+  lines:[{code:'EL-101',qty:480},{code:'EL-104',qty:1360}], evidence:{photos:ph(8,'2026-04-23','21.5433°N 39.1728°E'), inspection:'IR-127'}, flags:[],
+  approvals:[{role:'مدير المشروع',by:'خالد العصيمي',at:'2026-05-18 11:10'}], events:[['تقديم الإشعار','م. ياسر الحربي','2026-05-17 10:30','التحقق الآلي: لا ملاحظات'],['اعتماد مدير المشروع','خالد العصيمي','2026-05-18 11:10','']]},
+ {id:'DN-2026-035', contract:'C-2025-027', sub:'S-02', proj:'P-002', from:'2026-04-01', to:'2026-04-20', date:'2026-04-21', by:'م. ياسر الحربي', status:'approved', invoice:'INV-2245',
+  lines:[{code:'EL-103',qty:480},{code:'EL-104',qty:1800}], evidence:{photos:ph(9,'2026-04-03','21.5433°N 39.1728°E'), inspection:'IR-120'}, flags:[],
+  approvals:[{role:'مدير المشروع',by:'خالد العصيمي',at:'2026-04-22 09:00'}], events:[['تقديم الإشعار','م. ياسر الحربي','2026-04-21 15:45','التحقق الآلي: لا ملاحظات'],['اعتماد مدير المشروع','خالد العصيمي','2026-04-22 09:00','']]},
+ {id:'DN-2026-036', contract:'C-2025-027', sub:'S-02', proj:'P-002', from:'2026-04-15', to:'2026-04-28', date:'2026-04-30', by:'م. ياسر الحربي', status:'flagged',
+  lines:[{code:'EL-103',qty:900}], evidence:{photos:[{d:null,gps:null},{d:null,gps:null},{d:null,gps:null}], inspection:null},
+  flags:[
+    {t:'dn_progress_anomaly',line:'EL-103',d:'٩٠٠ نقطة خلال ١٤ يوماً = ٦٤٫٣/يوم، بينما المعدل المتوقع من برنامج العقد ٨٫١/يوم (٨× المتوقع).'},
+    {t:'dn_overlap',line:'EL-103',d:'الإشعار DN-2026-035 (2026-04-01 → 2026-04-20) يغطي البند EL-103 في فترة متداخلة — احتمال احتساب نفس الأعمال مرتين.',ref:'DN-2026-035'},
+    {t:'dn_evidence_missing',d:'الصور المرفقة (٣) بلا تاريخ التقاط وبلا موقع جغرافي — لا يمكن ربطها بالفترة والموقع.'},
+    {t:'dn_no_inspection',d:'لم يُربط تقرير فحص/استلام من الاستشاري أو مراقب الجودة.'}],
+  approvals:[], events:[['تقديم الإشعار','م. ياسر الحربي','2026-04-30 17:20','التحقق الآلي: ٢ ملاحظة حاجبة و٢ تنبيه']]},
+ {id:'DN-2026-037', contract:'C-2025-014', sub:'S-01', proj:'P-001', from:'2026-05-09', to:'2026-06-05', date:'2026-06-07', by:'م. ياسر الحربي', status:'clean',
+  lines:[{code:'CN-004',qty:400},{code:'CN-005',qty:900}], evidence:{photos:ph(9,'2026-05-11','24.7136°N 46.6753°E'), inspection:'IR-131'}, flags:[],
+  approvals:[{role:'مدير المشروع',by:null,at:null}], events:[['تقديم الإشعار','م. ياسر الحربي','2026-06-07 09:05','التحقق الآلي: لا ملاحظات — بانتظار اعتماد مدير المشروع']]},
+ {id:'DN-2026-038', contract:'C-2025-027', sub:'S-02', proj:'P-002', from:'2026-05-16', to:'2026-06-10', date:'2026-06-11', by:'م. ياسر الحربي', status:'draft',
+  lines:[{code:'EL-104',qty:700}], evidence:{photos:ph(4,'2026-05-18','21.5433°N 39.1728°E'), inspection:null}, flags:[], approvals:[], events:[['إنشاء الإشعار (مسودة)','م. ياسر الحربي','2026-06-11 08:30','']]}
+];
+const findDN  = id => DNS.find(d=>d.id===id);
+const dnValue = dn => dn.lines.reduce((a,l)=>{ const b=boqItem(dn.contract,l.code); return a+l.qty*(b?b.price:0); },0);
+const dnOpen  = dn => (dn.flags||[]).filter(f=>!f.resolved);
+const dnBlocking = dn => dnOpen(dn).filter(f=>DN_FLAGS[f.t].sev==='blocking').length;
+const dnBadge = st => `<span class="text-xs font-bold px-2.5 py-1 rounded-full ${DN_STATUS[st].cls}">${DN_STATUS[st].ar}</span>`;
+const dnChain = dn => ['مدير المشروع', ...(dnValue(dn)>DN_RULES.secondApprovalAbove?['مدير العقود']:[])];
+function dnEvent(dn,title,detail){ (dn.events=dn.events||[]).push([title, ME.name, nowStr(), detail||'']); logAudit(title, dn.id, detail||''); }
+/* delivered-and-approved quantity behind an invoice line */
+function deliveredForInvoice(inv, code){
+  if(!inv.dn||!inv.dn.length) return null;
+  return inv.dn.map(findDN).filter(d=>d&&d.status==='approved').reduce((a,d)=>a+d.lines.filter(l=>l.code===code).reduce((x,l)=>x+l.qty,0),0);
+}
+/* ── the delivery validation engine ── */
+function dnValidate(dn){
+  const c=conOf(dn.contract), items=BOQ[dn.contract]||[], flags=[];
+  const days=Math.max(1,(new Date(dn.to)-new Date(dn.from))/86400000+1), cdays=Math.max(1,(new Date(c.end)-new Date(c.start))/86400000);
+  dn.lines.forEach(l=>{
+    const b=items.find(x=>x.code===l.code);
+    if(!b){ flags.push({t:'dn_item_unmatched',line:l.code,d:`البند ${l.code} غير موجود في جدول كميات العقد ${dn.contract}.`}); return; }
+    const cum=b.invoicedQty+l.qty;
+    if(cum>b.qty) flags.push({t:'dn_qty_overrun',line:l.code,d:`التعاقدي ${fmtNum(b.qty)} ${b.unit} — المُسلَّم المعتمد سابقاً ${fmtNum(b.invoicedQty)} — هذا الإشعار ${fmtNum(l.qty)} — الإجمالي ${fmtNum(cum)} (تجاوز ${fmtNum(cum-b.qty)}).`,contracted:b.qty,prior:b.invoicedQty,current:l.qty});
+    const expected=b.qty/cdays, actual=l.qty/days;
+    if(actual>expected*DN_RULES.anomaly) flags.push({t:'dn_progress_anomaly',line:l.code,d:`${fmtNum(l.qty)} ${b.unit} خلال ${fmtNum(days)} يوماً = ${fmtNum(Math.round(actual*10)/10)}/يوم، بينما المعدل المتوقع من برنامج العقد ${fmtNum(Math.round(expected*10)/10)}/يوم (${fmtNum(Math.round(actual/expected))}× المتوقع).`});
+    const ov=DNS.find(o=>o.id!==dn.id&&o.contract===dn.contract&&!['rejected','returned','draft'].includes(o.status)&&o.lines.some(x=>x.code===l.code)&&o.from<=dn.to&&o.to>=dn.from);
+    if(ov) flags.push({t:'dn_overlap',line:l.code,d:`الإشعار ${ov.id} (${ov.from} → ${ov.to}) يغطي البند ${l.code} في فترة متداخلة — احتمال احتساب نفس الأعمال مرتين.`,ref:ov.id});
+  });
+  const p=dn.evidence.photos||[];
+  if(!p.length||!p.every(x=>x.d&&x.gps)) flags.push({t:'dn_evidence_missing',d:p.length?`الصور المرفقة (${fmtNum(p.length)}) بلا تاريخ التقاط أو بلا موقع جغرافي — لا يمكن ربطها بالفترة والموقع.`:'لا توجد صور موقع مرفقة تثبت تنفيذ الأعمال في الفترة المذكورة.'});
+  if(!dn.evidence.inspection) flags.push({t:'dn_no_inspection',d:'لم يُربط تقرير فحص/استلام من الاستشاري أو مراقب الجودة.'});
+  if(dn.from<c.start||dn.to>c.end) flags.push({t:'dn_period_outside',d:`فترة الإشعار خارج مدة العقد (${c.start} → ${c.end}).`});
+  return flags;
+}
+function dnRecompute(dn){
+  if(['approved','rejected','returned','draft'].includes(dn.status)) return;
+  dn.status = dnBlocking(dn)?'flagged':'clean';
+  if(dn.status==='clean' && !dn.approvals.length) dn.approvals = dnChain(dn).map(role=>({role,by:null,at:null}));
+}
+
+/* ── page ── */
+PAGES.deliveries = () => {
+  const pendingV = DNS.filter(d=>d.status==='clean').reduce((a,d)=>a+dnValue(d),0);
+  const nextStep = d => ({draft:'تقديم الإشعار', flagged:'معالجة ملاحظات التحقق الآلي', clean:`بانتظار ${(d.approvals.find(a=>!a.by)||{}).role||'الاعتماد'}`, approved:d.invoice?`مفوتر — ${d.invoice}`:'جاهز للفوترة', returned:'تعديل وإعادة التقديم', rejected:'—'})[d.status];
+  return `
+  <div class="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-4 gap-4 mb-6">
+    ${card('بانتظار الاعتماد', fmtNum(DNS.filter(d=>d.status==='clean').length), fmtMoney(pendingV),'amber')}
+    ${card('مُعلَّم بالتحقق الآلي', fmtNum(DNS.filter(d=>d.status==='flagged').length), 'يتطلب أدلة أو معالجة قبل الاعتماد','red')}
+    ${card('معتمد بانتظار الفوترة', fmtNum(DNS.filter(d=>d.status==='approved'&&!d.invoice).length), fmtMoney(DNS.filter(d=>d.status==='approved'&&!d.invoice).reduce((a,d)=>a+dnValue(d),0)),'brand')}
+    ${card('قيمة الأعمال المعتمدة', fmtMoney(DNS.filter(d=>d.status==='approved').reduce((a,d)=>a+dnValue(d),0)), `${fmtNum(DNS.filter(d=>d.status==='approved').length)} إشعار معتمد`,'brand')}
+  </div>
+  <div class="bg-white rounded-2xl border border-slate-200 p-4 mb-4 flex items-center gap-2 flex-wrap text-xs">
+    <span class="font-bold text-slate-600">مراحل الإشعار:</span>
+    ${['تقديم المهندس','التحقق الآلي من التسليم','اعتماد مدير المشروع','(مدير العقود فوق ٥٠٠ ألف)','فاتورة المقاول'].map((x,i,a)=>`<span class="flex items-center gap-1.5"><span class="w-5 h-5 rounded-full bg-brand-800 text-white flex items-center justify-center text-[10px] font-extrabold">${i+1}</span>${x}</span>${i<a.length-1?'<span class="text-slate-300">←</span>':''}`).join('')}
+  </div>
+  ${section(`إشعارات التسليم (${fmtNum(DNS.length)})`, `<div class="tbl-wrap"><table class="tbl w-full text-sm">
+    <thead><tr><th>رقم الإشعار</th><th>العقد</th><th>مقاول الباطن</th><th>الفترة</th><th>مقدم الإشعار</th><th>القيمة</th><th>الأدلة</th><th>التحقق الآلي</th><th>الحالة</th><th>الخطوة التالية</th></tr></thead>
+    <tbody>${[...DNS].sort((a,b)=>b.date.localeCompare(a.date)).map(d=>`<tr class="cursor-pointer" onclick="openDN('${d.id}')">
+      <td class="font-bold text-brand-800 whitespace-nowrap">${d.id}</td>
+      <td class="text-slate-500 whitespace-nowrap">${d.contract}</td>
+      <td>${subOf(d.sub).name}</td>
+      <td class="text-slate-500 whitespace-nowrap text-xs">${dt(d.from)} — ${dt(d.to)}</td>
+      <td>${d.by}</td>
+      <td class="font-semibold whitespace-nowrap">${fmtMoney(dnValue(d))}</td>
+      <td class="text-xs whitespace-nowrap">📷 ${fmtNum((d.evidence.photos||[]).length)}${d.evidence.inspection?` · 📋 ${d.evidence.inspection}`:''}</td>
+      <td>${dnOpen(d).length?`<span class="font-extrabold ${dnBlocking(d)?'text-red-600':'text-amber-600'}">${fmtNum(dnOpen(d).length)}</span>`:d.status==='draft'?'—':'<span class="text-emerald-600">✓</span>'}</td>
+      <td>${dnBadge(d.status)}</td>
+      <td class="text-xs text-slate-600">${nextStep(d)}</td></tr>`).join('')}</tbody></table></div>`, primaryBtn('deliveries',BTN_SM))}`;
+};
+
+/* ── detail ── */
+let DNTAB='lines';
+function openDN(id, tab){
+  const dn=findDN(id); DNTAB=tab||DNTAB||'lines';
+  const tabs=[['lines','الأعمال المُسلَّمة'],['ai',`التحقق الآلي (${fmtNum(dnOpen(dn).length)})`],['evidence',`الأدلة (${fmtNum((dn.evidence.photos||[]).length)})`],['approval','الاعتماد'],['log','السجل']];
+  const isAdmin=ME.role==='admin', isEng=['admin','engineer'].includes(ME.role);
+  const foot = {
+    draft:    isEng?[`submitDN('${id}')`,'تقديم الإشعار وتشغيل التحقق الآلي ←']:null,
+    flagged:  [`openDN('${id}','ai')`,'معالجة ملاحظات التحقق ←'],
+    clean:    isAdmin?[`openDN('${id}','approval')`,'الاعتماد ←']:null,
+    approved: !dn.invoice&&['admin','engineer','reviewer'].includes(ME.role)?[`invoiceFromDN('${id}')`,'إنشاء فاتورة من هذا الإشعار ←']:dn.invoice?[`openInvoice('${dn.invoice}')`,`فتح الفاتورة ${dn.invoice}`]:null,
+    returned: isEng?[`submitDN('${id}')`,'إعادة التقديم ←']:null, rejected:null }[dn.status];
+  showModal(mHead(`${dn.id} — ${conOf(dn.contract).title}`, `${dn.contract} · ${subOf(dn.sub).name} · الفترة ${dtBoth(dn.from)} — ${dtBoth(dn.to)} · قدّمه ${dn.by}`) + `
+  <div class="tabs px-6 pt-3 border-b border-slate-200 flex gap-1 shrink-0">${tabs.map(([t,l])=>`<button onclick="openDN('${id}','${t}')" class="tab px-4 py-2.5 text-sm border-b-2 ${DNTAB===t?'active':'border-transparent text-slate-500 hover:text-slate-700'}">${l}</button>`).join('')}</div>
+  <div class="mbody flex-1 overflow-y-auto p-6">${dnTab(dn)}</div>
+  <div class="mfoot px-6 py-4 border-t border-slate-200 shrink-0">
+    <div id="dn-return-box" hidden class="mb-3 flex flex-wrap items-center gap-2"><input type="text" placeholder="سبب الإعادة للمهندس — إلزامي ويُحفظ في سجل التدقيق" class="border border-red-300 rounded-lg px-3 py-2 text-sm flex-1 min-w-[200px]"><button onclick="returnDN('${id}')" class="px-4 py-2 rounded-lg bg-red-600 text-white font-bold text-sm">تأكيد الإعادة</button><span class="err text-[11px] text-red-600 font-bold"></span></div>
+    <div class="flex items-center justify-between flex-wrap gap-2">
+      <div class="flex items-center gap-2 text-xs">${dnBadge(dn.status)}${dnBlocking(dn)?`<span class="text-red-600 font-bold">⛔ ${fmtNum(dnBlocking(dn))} ملاحظة حاجبة — لا يمكن الاعتماد قبل معالجتها</span>`:''}</div>
+      <div class="flex gap-2 flex-wrap">
+        <button onclick="closeModal()" class="px-4 py-2.5 rounded-xl border border-slate-300 font-bold text-sm">إغلاق</button>
+        ${isAdmin&&['flagged','clean'].includes(dn.status)?`<button onclick="document.getElementById('dn-return-box').hidden^=1" class="px-4 py-2.5 rounded-xl border border-slate-300 font-bold text-sm">إعادة للمهندس</button>`:''}
+        ${foot?`<button onclick="${foot[0]}" class="px-5 py-2.5 rounded-xl bg-brand-800 text-white font-bold text-sm">${foot[1]}</button>`:''}
+      </div></div></div>`, 'w-full max-w-6xl h-[94vh]');
+}
+function dnTab(dn){
+  const id=dn.id, isAdmin=ME.role==='admin', isEng=['admin','engineer'].includes(ME.role);
+  if(DNTAB==='lines') return `
+    <div class="tbl-wrap"><table class="tbl w-full text-sm"><thead><tr><th>البند</th><th>الوصف</th><th>الوحدة</th><th>التعاقدي</th><th>المُسلَّم المعتمد سابقاً</th><th>هذا الإشعار</th><th>التراكمي</th><th>المتبقي</th><th>سعر العقد</th><th>قيمة الإشعار</th></tr></thead>
+      <tbody>${dn.lines.map(l=>{ const b=boqItem(dn.contract,l.code)||{ar:'—',unit:'',qty:0,invoicedQty:0,price:0}; const prior=dn.status==='approved'?b.invoicedQty-l.qty:b.invoicedQty, cum=prior+l.qty, over=cum>b.qty;
+        return `<tr class="${over?'bg-red-50/60':''}"><td class="font-bold text-brand-800">${l.code}</td><td class="max-w-xs">${b.ar}</td><td>${b.unit}</td><td>${fmtNum(b.qty)}</td><td>${fmtNum(prior)}</td><td class="font-extrabold">${fmtNum(l.qty)}</td><td class="${over?'text-red-600 font-bold':''}">${fmtNum(cum)}${over?' ⚠':''}</td><td>${fmtNum(Math.max(b.qty-cum,0))}</td><td>${fmtNum(b.price)}</td><td class="font-semibold whitespace-nowrap">${fmtMoney(l.qty*b.price)}</td></tr>`;}).join('')}</tbody>
+      <tfoot><tr class="bg-slate-50 font-extrabold"><td colspan="9">قيمة الأعمال المُسلَّمة في هذا الإشعار (قبل الضريبة)</td><td>${fmtMoney(dnValue(dn))}</td></tr></tfoot></table></div>
+    <div class="grid grid-cols-1 lg:grid-cols-3 gap-3 mt-4 text-sm">
+      ${[['نسبة الإنجاز التراكمية للعقد', fmtPct((BOQ[dn.contract]||[]).reduce((a,b)=>a+b.invoicedQty*b.price,0)/conOf(dn.contract).value*100)],['مدة الفترة',`${fmtNum((new Date(dn.to)-new Date(dn.from))/86400000+1)} يوماً`],['الفاتورة المرتبطة', dn.invoice?`<button onclick="openInvoice('${dn.invoice}')" class="font-bold text-brand-700 hover:underline">${dn.invoice}</button>`:'لم تُصدر بعد']].map(([k,v])=>`<div class="bg-slate-50 rounded-xl p-3"><div class="text-xs text-slate-500">${k}</div><div class="font-extrabold text-brand-800">${v}</div></div>`).join('')}
+    </div>`;
+  if(DNTAB==='ai'){
+    if(dn.status==='draft') return `<div class="text-center py-14 text-slate-400 text-sm">يُشغَّل التحقق الآلي عند تقديم الإشعار.</div>`;
+    const checks=[
+      ['الكميات التراكمية مقابل العقد', dn.flags.some(f=>f.t==='dn_qty_overrun'&&!f.resolved)?'fail':dn.flags.some(f=>f.t==='dn_qty_overrun')?'resolved':'pass', 'لكل بند: المُسلَّم المعتمد سابقاً + هذا الإشعار ≤ الكمية التعاقدية'],
+      ['معدل الإنجاز مقابل برنامج العقد', dn.flags.some(f=>f.t==='dn_progress_anomaly'&&!f.resolved)?'warn':'pass', `الكمية ÷ أيام الفترة مقارنة بالمعدل المتوقع (التعاقدي ÷ مدة العقد) — حد الشذوذ ${fmtNum(DN_RULES.anomaly)}×`],
+      ['التداخل مع إشعارات سابقة', dn.flags.some(f=>f.t==='dn_overlap'&&!f.resolved)?'fail':dn.flags.some(f=>f.t==='dn_overlap')?'resolved':'pass', 'نفس العقد ونفس البند وفترة متداخلة = احتمال احتساب مزدوج'],
+      ['أدلة التسليم', dn.flags.some(f=>f.t==='dn_evidence_missing'&&!f.resolved)?'fail':dn.flags.some(f=>f.t==='dn_evidence_missing')?'resolved':'pass', 'صور موقع مؤرخة بموقع جغرافي داخل الفترة ونطاق المشروع'],
+      ['تقرير الفحص / الاستلام', dn.flags.some(f=>f.t==='dn_no_inspection'&&!f.resolved)?'warn':'pass', 'ربط تقرير الاستشاري أو مراقب الجودة'],
+      ['مطابقة البنود بجدول الكميات', dn.flags.some(f=>f.t==='dn_item_unmatched'&&!f.resolved)?'fail':'pass', 'كل بند في الإشعار موجود في جدول كميات العقد']];
+    const ic={pass:['✓','text-emerald-700','border-emerald-200 bg-emerald-50'],warn:['⚠','text-amber-700','border-amber-200 bg-amber-50'],fail:['✕','text-red-700','border-red-200 bg-red-50'],resolved:['✓','text-emerald-700','border-emerald-200 bg-emerald-50']};
+    return `<div class="grid grid-cols-1 lg:grid-cols-2 gap-2 mb-5">${checks.map(([t,st,d])=>`<div class="flex items-start gap-2.5 border ${ic[st][2]} rounded-xl p-3"><div class="font-extrabold ${ic[st][1]}">${ic[st][0]}</div><div><div class="text-sm font-bold">${t}${st==='resolved'?' <span class="text-[10px] text-emerald-700">(عولجت)</span>':''}</div><div class="text-xs text-slate-600">${d}</div></div></div>`).join('')}</div>
+    ${dn.flags.length?`<h4 class="font-extrabold text-brand-800 mb-2">الملاحظات</h4><div class="space-y-3">${dn.flags.map((f,ix)=>{const m=DN_FLAGS[f.t];return `<div data-dnflag="${ix}" class="border ${m.sev==='blocking'?'border-red-200':'border-amber-200'} ${f.resolved?'flag-resolved':''} rounded-2xl overflow-hidden">
+      <div class="flag-head ${m.sev==='blocking'?'bg-red-50':'bg-amber-50'} px-4 py-3 flex items-center justify-between flex-wrap gap-2"><div class="flex items-center gap-2.5">${sevPill(m.sev)}<span class="font-extrabold ${m.sev==='blocking'?'text-red-800':'text-amber-900'}">${m.ar}</span>${f.line?`<span class="text-xs bg-white border border-slate-300 rounded px-2 py-0.5 font-bold">${f.line}</span>`:''}</div>${f.resolved?'<span class="text-xs font-bold text-emerald-700">✓ تمت المعالجة</span>':''}</div>
+      <div class="p-4 text-sm"><p class="text-slate-700 leading-relaxed mb-3">${f.d}</p>
+        ${f.ref?`<button onclick="openDN('${f.ref}')" class="text-xs font-bold text-brand-700 hover:underline mb-3">فتح الإشعار ${f.ref} ↗</button>`:''}
+        ${f.t==='dn_evidence_missing'&&!f.resolved&&isEng?`<button onclick="attachEvidence('${id}')" class="text-xs font-bold bg-brand-800 text-white rounded-lg px-3.5 py-2 mb-3">📷 إرفاق صور مؤرخة من الموقع</button>`:''}
+        ${f.t==='dn_no_inspection'&&!f.resolved&&isEng?`<button onclick="attachInspection('${id}')" class="text-xs font-bold border border-brand-300 text-brand-800 rounded-lg px-3.5 py-2 mb-3">📋 ربط تقرير فحص</button>`:''}
+        ${f.resolved?`<div class="border-t border-slate-200 pt-3 text-xs"><div class="font-bold text-emerald-700 mb-1">✓ ${f.resolved.reason}</div><div class="text-slate-600">${f.resolved.note}</div><div class="text-slate-400 mt-1">${f.resolved.by} · <span dir="ltr">${f.resolved.at}</span></div></div>`
+        : isAdmin?`<div class="border-t border-slate-200 pt-3"><div class="text-xs font-bold text-slate-600 mb-2">معالجة الملاحظة (مدير المشروع)</div><div class="flex flex-wrap gap-2 mb-2"><select class="border border-slate-300 rounded-lg px-3 py-2 text-xs flex-1 min-w-[200px]"><option>اختر سبب المعالجة…</option><option>تم التحقق ميدانياً من التنفيذ</option><option>الكمية الزائدة مغطاة بأمر تغيير قيد الإصدار</option><option>فترة الإشعار مصححة ولا تداخل فعلي</option><option>خطأ في الإشعار — يُعاد للمهندس</option></select><input type="text" placeholder="ملاحظة إلزامية تُحفظ في سجل التدقيق" class="border border-slate-300 rounded-lg px-3 py-2 text-xs flex-1 min-w-[200px]"></div><button onclick="resolveDNFlag('${id}',${ix},this)" class="text-xs font-bold bg-brand-800 text-white rounded-lg px-3.5 py-2">قبول المعالجة</button><div class="err text-[11px] text-red-600 font-bold mt-2"></div></div>`
+        : `<div class="text-xs text-slate-500 border-t border-slate-200 pt-3">تُعالَج بواسطة مدير المشروع بعد استكمال الأدلة.</div>`}
+      </div></div>`;}).join('')}</div>`:'<div class="text-emerald-700 font-bold text-sm">✓ اجتاز الإشعار كل فحوصات التحقق الآلي.</div>'}`;
+  }
+  if(DNTAB==='evidence'){
+    const p=dn.evidence.photos||[], c=conOf(dn.contract);
+    return `<div class="flex items-center justify-between flex-wrap gap-2 mb-4"><div class="text-sm"><b>${fmtNum(p.length)}</b> صورة · تقرير الفحص: <b>${dn.evidence.inspection||'<span class="text-red-600">غير مرتبط</span>'}</b> · موقع المشروع: ${projOf(dn.proj).name}</div>
+      ${isEng&&!['approved','rejected'].includes(dn.status)?`<div class="flex gap-2"><button onclick="attachEvidence('${id}')" class="text-xs font-bold bg-brand-800 text-white rounded-lg px-3.5 py-2">📷 إرفاق صور من الموقع</button><button onclick="attachInspection('${id}')" class="text-xs font-bold border border-brand-300 text-brand-800 rounded-lg px-3.5 py-2">📋 ربط تقرير فحص</button></div>`:''}</div>
+    ${p.length?`<div class="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-5 gap-3">${p.map((x,i)=>`<div class="rounded-xl overflow-hidden border ${x.d&&x.gps?'border-slate-200':'border-red-300'}"><div class="h-24 flex items-center justify-center text-white" style="background:linear-gradient(135deg,#48898b,#0f3133 ${(i*17)%60+30}%)"><svg class="w-8 h-8 opacity-70" fill="none" stroke="currentColor" stroke-width="1.6" viewBox="0 0 24 24"><path d="M3 8h3l2-3h8l2 3h3v11H3z"/><circle cx="12" cy="13" r="3.5"/></svg></div><div class="p-2 text-[11px] ${x.d?'text-slate-600':'text-red-600 font-bold'}">${x.d?`📅 ${x.d}`:'بلا تاريخ التقاط'}<br>${x.gps?`📍 <span dir="ltr">${x.gps}</span>`:'بلا موقع جغرافي'}</div></div>`).join('')}</div>`:'<div class="text-center py-10 text-red-600 font-bold text-sm">لا توجد صور مرفقة</div>'}
+    <div class="bg-slate-50 rounded-xl p-3 text-xs text-slate-600 mt-4 leading-relaxed">يتحقق النظام من بيانات EXIF لكل صورة: تاريخ الالتقاط داخل فترة الإشعار (${c.start} → ${c.end} للعقد)، والإحداثيات داخل نطاق موقع المشروع. الصور بلا بيانات لا تُحتسب دليلاً.</div>`;
+  }
+  if(DNTAB==='approval'){
+    if(dn.status==='draft'||dn.status==='flagged') return `<div class="text-center py-14 text-slate-400 text-sm">${dn.status==='draft'?'يُنشأ مسار الاعتماد بعد التقديم.':'لا يبدأ الاعتماد قبل معالجة الملاحظات الحاجبة في التحقق الآلي.'}</div>`;
+    const pend=dn.approvals.findIndex(a=>!a.by);
+    return `<div class="max-w-2xl"><div class="text-sm mb-3">قيمة الإشعار <b>${fmtMoney(dnValue(dn))}</b> — مسار من ${fmtNum(dn.approvals.length)} مستوى${dnValue(dn)>DN_RULES.secondApprovalAbove?' (يتجاوز ٥٠٠ ألف — يلزم اعتماد مدير العقود)':''}.</div>
+      <div class="space-y-2">${dn.approvals.map((a,ix)=>`<div class="flex items-center gap-3 border rounded-xl px-3 py-2.5 ${a.by?'border-emerald-200 bg-emerald-50':ix===pend?'border-amber-300 bg-amber-50':'border-slate-200'}"><div class="w-7 h-7 rounded-full flex items-center justify-center text-xs font-extrabold ${a.by?'bg-emerald-600 text-white':'bg-slate-200 text-slate-600'}">${a.by?'✓':fmtNum(ix+1)}</div><div class="flex-1"><div class="font-bold text-sm">${a.role}</div><div class="text-xs text-slate-500">${a.by?`${a.by} · <span dir="ltr">${a.at}</span>`:ix===pend?'بانتظار الاعتماد':'—'}</div></div>${!a.by&&ix===pend&&dn.status==='clean'&&isAdmin?`<button onclick="approveDNStep('${id}',${ix})" class="text-xs font-bold bg-brand-800 text-white rounded-lg px-3 py-1.5">اعتماد</button>`:''}</div>`).join('')}</div>
+      ${dn.status==='approved'?`<div class="border border-emerald-200 bg-emerald-50 rounded-2xl p-4 mt-4 text-sm"><div class="font-extrabold text-emerald-800">✓ إشعار معتمد — أُضيفت كمياته إلى المُسلَّم المعتمد للعقد</div><div class="text-xs text-slate-600 mt-1">${dn.invoice?`الفاتورة المرتبطة: ${dn.invoice}`:'يمكن الآن إصدار فاتورة المقاول على هذا الإشعار — ستُتحقق كمياتها ضده.'}</div></div>`:''}</div>`;
+  }
+  const ev=dn.events||[];
+  return `<div class="max-w-2xl relative pr-8"><div class="absolute right-[11px] top-2 bottom-2 w-0.5 bg-slate-200"></div>${ev.map((e,ix)=>`<div class="relative mb-6"><div class="absolute -right-8 top-1 w-6 h-6 rounded-full ${ix===ev.length-1?'bg-brand-800':'bg-white border-2 border-brand-300'} flex items-center justify-center">${ix===ev.length-1?'<div class="w-2 h-2 bg-white rounded-full"></div>':''}</div><div class="font-extrabold text-brand-800">${e[0]}</div><div class="text-xs text-slate-400 mb-1">${e[1]} · <span dir="ltr">${e[2]}</span></div><div class="text-sm text-slate-600">${e[3]}</div></div>`).join('')}</div>`;
+}
+
+/* ── actions ── */
+function submitDN(id){
+  const dn=findDN(id); dn.flags=dnValidate(dn); dn.status='validating'; dn.approvals=[]; dnRecompute(dn);
+  dnEvent(dn,'تقديم الإشعار',`التحقق الآلي: ${dnOpen(dn).length?`${fmtNum(dnBlocking(dn))} ملاحظة حاجبة و${fmtNum(dnOpen(dn).length-dnBlocking(dn))} تنبيه`:'لا ملاحظات'}`);
+  toast(dn.status==='clean'?'اجتاز الإشعار التحقق الآلي — بانتظار اعتماد مدير المشروع':'التحقق الآلي وجد ملاحظات — راجع تبويب التحقق'); openDN(id, dn.status==='clean'?'approval':'ai');
+}
+function resolveDNFlag(id,ix,el){
+  const dn=findDN(id), f=dn.flags[ix], card=el.closest('[data-dnflag]'), sel=card.querySelector('select'), inp=card.querySelector('input[type=text]');
+  const reason=sel.selectedIndex>0?sel.value:'', note=inp.value.trim();
+  if(!reason||!note) return card.querySelector('.err').textContent='اختر سبب المعالجة واكتب ملاحظة — كلاهما إلزامي.';
+  f.resolved={by:ME.name,at:nowStr(),reason,note}; dnRecompute(dn); dnEvent(dn,'معالجة ملاحظة',`${DN_FLAGS[f.t].ar} — ${reason} — ${note}`);
+  toast(dnBlocking(dn)?'تمت المعالجة — لا تزال هناك ملاحظات حاجبة':'تمت المعالجة — الإشعار جاهز للاعتماد'); openDN(id,'ai');
+}
+function attachEvidence(id){
+  const dn=findDN(id); dn.evidence.photos=ph(8,dn.from,projOf(dn.proj).id==='P-001'?'24.7136°N 46.6753°E':'21.5433°N 39.1728°E');
+  const f=dn.flags.find(x=>x.t==='dn_evidence_missing'&&!x.resolved); if(f) f.resolved={by:ME.name,at:nowStr(),reason:'أُرفقت صور مؤرخة بموقع جغرافي',note:`${fmtNum(dn.evidence.photos.length)} صور داخل الفترة ونطاق الموقع — تحقق آلي من EXIF`};
+  dnRecompute(dn); dnEvent(dn,'إرفاق أدلة التسليم',`${fmtNum(dn.evidence.photos.length)} صور مؤرخة`); toast('أُرفقت الصور وتحقق النظام من تاريخها وموقعها'); openDN(id,'evidence');
+}
+function attachInspection(id){
+  const dn=findDN(id); dn.evidence.inspection='IR-'+(140+DNS.indexOf(dn));
+  const f=dn.flags.find(x=>x.t==='dn_no_inspection'&&!x.resolved); if(f) f.resolved={by:ME.name,at:nowStr(),reason:'رُبط تقرير الفحص',note:dn.evidence.inspection};
+  dnRecompute(dn); dnEvent(dn,'ربط تقرير فحص',dn.evidence.inspection); toast(`رُبط تقرير الفحص ${dn.evidence.inspection}`); openDN(id,'evidence');
+}
+function approveDNStep(id,ix){
+  const dn=findDN(id); if(dnBlocking(dn)) return; dn.approvals[ix]={...dn.approvals[ix],by:ME.name,at:nowStr()}; dnEvent(dn,`اعتماد — ${dn.approvals[ix].role}`);
+  if(dn.approvals.every(a=>a.by)){ dn.status='approved'; dn.lines.forEach(l=>{ const b=boqItem(dn.contract,l.code); if(b) b.invoicedQty+=l.qty; }); dnEvent(dn,'اعتماد الإشعار',`أُضيفت الكميات إلى المُسلَّم المعتمد — قيمة ${fmtMoney(dnValue(dn))}`); toast('اعتُمد الإشعار — يمكن للمهندس إصدار الفاتورة عليه'); }
+  else toast('سُجِّل الاعتماد — بانتظار المستوى التالي');
+  openDN(id,'approval');
+}
+function returnDN(id){
+  const dn=findDN(id), box=document.getElementById('dn-return-box'), reason=box.querySelector('input').value.trim();
+  if(!reason) return box.querySelector('.err').textContent='سبب الإعادة إلزامي';
+  dn.status='returned'; dn.approvals=[]; dnEvent(dn,'إعادة الإشعار للمهندس',reason); toast('أُعيد الإشعار إلى المهندس'); closeModal(); go('deliveries');
+}
+function invoiceFromDN(id){
+  const dn=findDN(id), c=conOf(dn.contract), sub=subOf(dn.sub);
+  const n=INVOICES.length+1, inv={id:`INV-${dn.sub==='S-01'?'10':'22'}${String(70+n).padStart(2,'0')}`, dn:[dn.id], sub:dn.sub, contract:dn.contract, proj:dn.proj, date:new Date().toISOString().slice(0,10), vat:sub.vat, qr:true, conf:0.99, hash:Math.random().toString(16).slice(2,6)+'…'+Math.random().toString(16).slice(2,6), flags:[], events:[]};
+  inv.lines=dn.lines.map(l=>{ const b=boqItem(dn.contract,l.code); return L(l.code,dn.contract,l.qty,b.price); });
+  inv.subtotal=inv.lines.reduce((a,l)=>a+l.total,0); inv.vatAmt=Math.round(inv.subtotal*15)/100; inv.total=inv.subtotal+inv.vatAmt; inv.status='clean';
+  INVOICES.push(inv); dn.invoice=inv.id;
+  logAudit('إنشاء فاتورة من إشعار تسليم', inv.id, `${dn.id} — ${fmtMoney(inv.total)} — الكميات مطابقة للمُسلَّم المعتمد والأسعار للعقد`); addEvent(inv,'إنشاء الفاتورة من إشعار التسليم',`${dn.id} — التحقق: لا ملاحظات`); dnEvent(dn,'إصدار فاتورة',inv.id);
+  toast(`أُنشئت الفاتورة ${inv.id} — اجتازت التحقق وجاهزة للاعتماد`); openInvoice(inv.id);
+}
+
+/* ── new delivery note: drop the signed محضر, or enter manually ── */
+let NEWDN={lines:[]};
+const DN_EXTRACT_STEPS=['تحميل المستند وحساب بصمته','التعرف على النص العربي (طبقة PDF ← Tesseract)','استخراج العقد والفترة والبنود والكميات','قراءة توقيعات الاستلام وتقرير الفحص','مطابقة البنود بجدول كميات العقد'];
+function openNewDN(){ NEWDN={lines:[]}; renderNewDN(0); }
+function dnFile(file){ if(!file) return; NEWDN={lines:[], src:{name:file.name,size:file.size||0}}; dnExtractProgress(0); }
+function dnExtractProgress(i){
+  showModal(mHead('استخراج بيانات إشعار التسليم', `${NEWDN.src.name} · ${(NEWDN.src.size/1048576).toFixed(1)} م.ب`) + `<div class="p-6 space-y-3">${DN_EXTRACT_STEPS.map((t,ix)=>`<div class="flex items-center gap-3 text-sm"><div class="w-7 h-7 rounded-full flex items-center justify-center text-xs font-extrabold shrink-0 ${ix<i?'bg-emerald-600 text-white':ix===i?'bg-gold-500 text-white':'bg-slate-200 text-slate-500'}">${ix<i?'✓':fmtNum(ix+1)}</div><span class="${ix<=i?'font-bold text-slate-800':'text-slate-400'}">${t}</span>${ix===i?'<span class="text-xs text-slate-400">جارٍ…</span>':''}</div>`).join('')}<div class="h-2 bg-slate-100 rounded-full overflow-hidden mt-4"><div class="h-full bg-brand-700" style="width:${i/DN_EXTRACT_STEPS.length*100}%;transition:width .4s"></div></div></div>`, 'w-full max-w-lg');
+  clearTimeout(extractProgress._t);
+  extractProgress._t=setTimeout(()=>{ if(i<DN_EXTRACT_STEPS.length) dnExtractProgress(i+1); else { applyDNExtraction(); renderNewDN(1); } }, i<DN_EXTRACT_STEPS.length?520:250);
+}
+function applyDNExtraction(){
+  const ex={contract:'C-2025-014', from:'2026-06-06', to:'2026-06-30', inspection:'IR-140'};
+  const conf={contract:.95, from:.9, to:.86, inspection:.78};
+  const lines=[{code:'CN-002',qty:'40',conf:.93},{code:'CN-004',qty:'600',conf:.88},{code:'CN-003',qty:'1500',conf:.52}];
+  Object.assign(NEWDN, ex, {lines, conf, photos:7, raw:{...ex, lines:lines.map(l=>({...l}))}, src:{...NEWDN.src, pages:3, provider:'tesseract-ara (مسح ضوئي)', overall:.85}});
+}
+function dnDoc(){ const n=NEWDN, c=conOf(n.contract); return `<div class="doc-page cdoc rounded-lg p-7 mx-auto max-w-lg text-[13px] leading-loose">
+  <div class="text-center font-extrabold text-base mb-1">محضر تسليم أعمال — إشعار تسليم</div><div class="text-center text-xs text-slate-500 mb-4">مشروع ${projOf(c.proj).name}</div>
+  <p>العقد: <b data-f="contract">${c.id} — ${c.title}</b> · مقاول الباطن: ${subOf(c.sub).name}</p>
+  <p>الفترة: من <b data-f="from">${n.from}</b> إلى <b data-f="to">${n.to}</b></p>
+  <table class="w-full text-[11px] border border-slate-300 my-3" data-f="lines"><thead><tr class="bg-slate-100"><th class="border border-slate-300 p-1">البند</th><th class="border border-slate-300 p-1 text-right">الوصف</th><th class="border border-slate-300 p-1">الوحدة</th><th class="border border-slate-300 p-1">الكمية المنجزة</th></tr></thead>
+    <tbody>${n.raw.lines.map(l=>{const b=boqItem(n.contract,l.code);return `<tr><td class="border border-slate-300 p-1 text-center">${l.code}</td><td class="border border-slate-300 p-1">${b.ar}</td><td class="border border-slate-300 p-1 text-center">${b.unit}</td><td class="border border-slate-300 p-1 text-center ${l.conf<.6?'text-slate-400':''}">${l.conf<.6?'١٥٠٠ / ١٣٠٠ (غير واضح)':fmtNum(+l.qty)}</td></tr>`;}).join('')}</tbody></table>
+  <p>تقرير الفحص المرفق: <b data-f="inspection">${n.inspection}</b> · الصور المرفقة: ${fmtNum(n.photos)}</p>
+  <div class="grid grid-cols-3 gap-4 mt-4 text-xs text-center"><div>مهندس الموقع<br><span class="text-slate-400">✓</span></div><div>ممثل المقاول<br><span class="text-slate-400">✓</span></div><div>الاستشاري<br><span class="text-slate-400">✓</span></div></div>
+  <div class="text-[10px] text-slate-400 text-center mt-4">صفحة ١ من ${fmtNum(n.src.pages)} — مسح ضوئي</div></div>`; }
+function renderNewDN(step){
+  if(step===0){ showModal(mHead('إشعار تسليم جديد','أسقط محضر التسليم الموقّع ليستخرج النظام بياناته، أو أدخله يدوياً') + `<div class="mbody flex-1 overflow-y-auto p-6"><div class="grid grid-cols-1 lg:grid-cols-2 gap-4">
+    <div id="cdrop" class="border-2 border-dashed border-brand-300 bg-brand-50/50 rounded-2xl p-8 text-center cursor-pointer" ondragover="event.preventDefault();this.classList.add('drag')" ondragleave="this.classList.remove('drag')" ondrop="event.preventDefault();this.classList.remove('drag');dnFile(event.dataTransfer.files[0])" onclick="document.getElementById('dnfile').click()">
+      <input id="dnfile" type="file" accept=".pdf,.jpg,.jpeg,.png" hidden onchange="dnFile(this.files[0])">
+      <svg class="w-12 h-12 mx-auto text-brand-400 mb-3" fill="none" stroke="currentColor" stroke-width="1.6" viewBox="0 0 24 24"><path d="M12 16V4m0 0L8 8m4-4 4 4M4 16v2a2 2 0 002 2h12a2 2 0 002-2v-2"/></svg>
+      <div class="font-extrabold text-brand-800 text-lg mb-1">أسقط محضر التسليم هنا</div><div class="text-sm text-slate-500 mb-4">محضر موقّع من المهندس والمقاول والاستشاري — PDF أو صورة · يستخرج النظام العقد والفترة والبنود والكميات</div>
+      <span class="inline-block bg-brand-800 text-white text-sm font-bold rounded-xl px-4 py-2">اختيار ملف</span>
+      <div class="mt-3"><button type="button" onclick="event.stopPropagation();dnFile({name:'محضر_تسليم_يونيو_C-2025-014.pdf',size:1870000})" class="text-xs text-brand-700 font-bold hover:underline">أو جرّب بمستند تجريبي ←</button></div></div>
+    <button onclick="NEWDN={lines:[]};renderNewDN(1)" class="border-2 border-dashed border-slate-300 rounded-2xl p-8 text-center hover:bg-slate-50"><div class="text-3xl mb-2">✎</div><div class="font-extrabold text-slate-700 text-lg mb-1">إدخال يدوي</div><div class="text-sm text-slate-500">اختيار العقد وإدخال الكميات المنجزة وإرفاق الأدلة</div></button></div></div>`, 'w-full max-w-4xl max-h-[94vh]'); return; }
+  const cm=NEWDN.conf, src=NEWDN.src, cid=NEWDN.contract||CONTRACTS[0].id, items=BOQ[cid]||[];
+  const form=`<div id="dnform" class="space-y-4">
+    <div class="grid grid-cols-1 sm:grid-cols-3 gap-4">
+      ${fwc(cm,'contract','العقد',`<select name="contract" onchange="dnCollect();NEWDN.contract=this.value;NEWDN.lines=[];renderNewDN(1)" class="${cinpc(cm,'contract')}">${CONTRACTS.map(c=>`<option value="${c.id}" ${cid===c.id?'selected':''}>${c.id} — ${c.title}</option>`).join('')}</select>`)}
+      ${fwc(cm,'from','من تاريخ',`<input type="date" name="from" value="${NEWDN.from||''}" class="${cinpc(cm,'from')}" dir="ltr">`)}
+      ${fwc(cm,'to','إلى تاريخ',`<input type="date" name="to" value="${NEWDN.to||''}" class="${cinpc(cm,'to')}" dir="ltr">`)}
+    </div>
+    <div class="text-xs font-bold text-slate-600" onmouseenter="hlDoc('lines',1)" onmouseleave="hlDoc('lines',0)">الكميات المنجزة هذه الفترة — اترك البند فارغاً إن لم يُنفَّذ${cm?' <span class="font-normal text-slate-400">— الصفوف المظلّلة أقل ثقة</span>':''}</div>
+    <div class="tbl-wrap"><table class="tbl w-full text-sm"><thead><tr><th>البند</th><th>الوصف</th><th>الوحدة</th><th>التعاقدي</th><th>المُسلَّم المعتمد</th><th>المتبقي</th><th>الكمية المنجزة</th></tr></thead>
+      <tbody id="dn-rows">${items.map(b=>{const l=NEWDN.lines.find(x=>x.code===b.code)||{}; return `<tr data-code="${b.code}" class="${l.conf===undefined?'':l.conf<.6?'bg-red-50':l.conf<.75?'bg-amber-50':''}"><td class="font-bold text-brand-800">${b.code}</td><td class="max-w-xs">${b.ar}</td><td>${b.unit}</td><td>${fmtNum(b.qty)}</td><td>${fmtNum(b.invoicedQty)}</td><td>${fmtNum(b.qty-b.invoicedQty)}</td><td><input type="number" min="0" step="0.001" value="${l.qty||''}" class="${INP}" dir="ltr" style="min-width:7rem">${l.conf!==undefined?`<div class="mt-1">${confBar(l.conf)}</div>`:''}</td></tr>`;}).join('')}</tbody></table></div>
+    <div class="grid grid-cols-1 sm:grid-cols-3 gap-4">
+      ${fwc(cm,'inspection','تقرير الفحص / الاستلام',`<input name="inspection" value="${NEWDN.inspection||''}" placeholder="IR-…" class="${cinpc(cm,'inspection')}" dir="ltr">`,false)}
+      <div class="sm:col-span-2"><span class="text-xs font-bold text-slate-600 mb-1 block">أدلة التسليم <span class="text-red-500">*</span></span><div class="flex items-center gap-3 flex-wrap border border-slate-300 rounded-lg px-3 py-2 text-sm"><span id="dn-photos">📷 ${fmtNum(NEWDN.photos||0)} صورة</span><button type="button" onclick="NEWDN.photos=(NEWDN.photos||0)+6;document.getElementById('dn-photos').textContent='📷 '+fmtNum(NEWDN.photos)+' صورة'" class="text-xs font-bold text-brand-700 border border-brand-200 bg-brand-50 rounded-lg px-3 py-1.5">إرفاق صور من الموقع</button><span class="text-[11px] text-slate-400">يُتحقق من تاريخ الالتقاط والموقع الجغرافي تلقائياً</span></div></div>
+    </div>
+    <div class="err text-xs text-red-600 font-bold"></div>
+    <div class="flex justify-between gap-2 flex-wrap"><div class="flex gap-2"><button onclick="renderNewDN(0)" class="px-4 py-2.5 rounded-xl border border-slate-300 font-bold text-sm">→ رجوع</button><button onclick="closeModal()" class="px-4 py-2.5 rounded-xl border border-slate-300 font-bold text-sm">إلغاء</button></div>
+      <div class="flex gap-2"><button onclick="saveDN(false)" class="px-4 py-2.5 rounded-xl border border-brand-300 text-brand-800 font-bold text-sm">حفظ كمسودة</button><button onclick="saveDN(true)" class="px-5 py-2.5 rounded-xl bg-brand-800 text-white font-bold text-sm">تقديم وتشغيل التحقق الآلي ←</button></div></div></div>`;
+  const body=src?`<div class="grid grid-cols-1 lg:grid-cols-2"><div class="bg-slate-200 p-5 border-l border-slate-300 overflow-y-auto" style="max-height:78vh">${dnDoc()}<div class="text-center text-xs text-slate-500 mt-3">مرّر المؤشر فوق أي حقل لتحديد موضعه في المستند</div></div><div class="p-6"><div class="bg-amber-50 border border-amber-200 rounded-xl p-3 text-xs text-amber-900 mb-4 leading-relaxed">استُخرجت البيانات من <b>${src.name}</b> — ${fmtNum(src.pages)} صفحة · <span dir="ltr">${src.provider}</span> · ثقة إجمالية ${fmtPct(src.overall*100)}. راجع الحقول المظلّلة؛ تُحفظ القيمة الأصلية بجانب أي تعديل.</div>${form}</div></div>`:`<div class="p-6">${form}</div>`;
+  showModal(mHead('إشعار تسليم جديد','يُقدَّم من مهندس الموقع ويمر على التحقق الآلي ثم اعتماد مدير المشروع') + `<div class="mbody flex-1 overflow-y-auto">${body}</div>`, src?'w-full max-w-7xl max-h-[94vh]':'w-full max-w-5xl max-h-[94vh]');
+}
+function dnCollect(){ const f=document.getElementById('dnform'); if(!f) return; ['contract','from','to','inspection'].forEach(n=>NEWDN[n]=f.querySelector(`[name=${n}]`).value.trim()); NEWDN.lines=[...f.querySelectorAll('#dn-rows tr')].map(r=>{const v=r.querySelector('input').value.trim(); const p=(NEWDN.lines||[]).find(x=>x.code===r.dataset.code); return v?{code:r.dataset.code, qty:v, ...(p&&p.conf!==undefined?{conf:p.conf}:{})}:null;}).filter(Boolean); }
+function saveDN(submit){
+  dnCollect(); const f=document.getElementById('dnform');
+  if(!NEWDN.from||!NEWDN.to) return f.querySelector('.err').textContent='حدد فترة التسليم.';
+  if(NEWDN.to<NEWDN.from) return f.querySelector('.err').textContent='تاريخ النهاية قبل البداية.';
+  if(!NEWDN.lines.length||NEWDN.lines.some(l=>!(+l.qty>0))) return f.querySelector('.err').textContent='أدخل كمية منجزة أكبر من صفر لبند واحد على الأقل.';
+  const c=conOf(NEWDN.contract), n=DNS.length+27;
+  const dn={id:`DN-2026-0${n}`, contract:c.id, sub:c.sub, proj:c.proj, from:NEWDN.from, to:NEWDN.to, date:new Date().toISOString().slice(0,10), by:ME.name, status:'draft',
+    lines:NEWDN.lines.map(l=>({code:l.code, qty:+l.qty})), evidence:{photos:ph(NEWDN.photos||0, NEWDN.from, c.proj==='P-001'?'24.7136°N 46.6753°E':'21.5433°N 39.1728°E'), inspection:NEWDN.inspection||null}, flags:[], approvals:[], events:[],
+    doc: NEWDN.src?{name:NEWDN.src.name, pages:NEWDN.src.pages, overall:NEWDN.src.overall}:null};
+  DNS.push(dn); dnEvent(dn, submit?'إنشاء الإشعار':'إنشاء الإشعار (مسودة)', `${fmtNum(dn.lines.length)} بند — قيمة ${fmtMoney(dnValue(dn))}${dn.doc?` — من المستند ${dn.doc.name}`:''}`);
+  closeModal(); go('deliveries'); if(submit) submitDN(dn.id); else { toast(`حُفظ ${dn.id} كمسودة`); openDN(dn.id,'lines'); }
+}
+
+/* ═══════════════════════════════════════════════════════════════════════════
+   PAYMENTS — المدفوعات: جاهز للدفع ← دفعة سداد ← اعتماد ← تحويل
+   ═══════════════════════════════════════════════════════════════════════════ */
+const PAY_STATUS = {pending_approval:{ar:'بانتظار اعتماد المدير المالي',cls:'bg-amber-100 text-amber-800'}, approved:{ar:'معتمدة — بانتظار التحويل',cls:'bg-brand-100 text-brand-800'}, paid:{ar:'مدفوعة',cls:'bg-emerald-100 text-emerald-700'}, cancelled:{ar:'ملغاة',cls:'bg-slate-200 text-slate-600'}};
+const PAYRUNS = [
+ {id:'PAY-2026-005', date:'2026-02-27', invoices:['INV-1042','INV-2210'], status:'paid', by:'سارة الدوسري', approvedBy:'خالد العصيمي', approvedAt:'2026-03-01 10:20', bankRef:'ANB-TRF-20260302-0417', paidAt:'2026-03-02',
+  events:[['إنشاء دفعة السداد','سارة الدوسري','2026-02-27 14:00','فاتورتان — صافي ٦٠٠٬٢٦٤٫٥٠ ر.س'],['اعتماد المدير المالي','خالد العصيمي','2026-03-01 10:20',''],['تأكيد التحويل','سارة الدوسري','2026-03-02 11:45','ANB-TRF-20260302-0417']]}
+];
+const findRun = id => PAYRUNS.find(r=>r.id===id);
+const PAY_TERMS = 30;
+/* what is actually payable on an approved invoice */
+function deductions(inv){
+  const c=inv.contract?conOf(inv.contract):{retention:0,advance:0,value:0};
+  const retention=Math.round(inv.subtotal*(c.retention||0))/100;
+  const advTotal=(c.value||0)*(c.advance||0)/100;
+  const recoveredBefore=INVOICES.filter(x=>x.contract===inv.contract&&invKey(x)!==invKey(inv)&&['paid','archived'].includes(x.status)&&x.date<inv.date).reduce((a,x)=>a+Math.round(x.subtotal*(c.advance||0))/100,0);
+  const advance=Math.max(0,Math.min(Math.round(inv.subtotal*(c.advance||0))/100, advTotal-recoveredBefore));
+  return {gross:inv.total, retention, advance, net:inv.total-retention-advance};
+}
+const dueDate = inv => { const d=new Date((inv.approvedAt||inv.date)+'T00:00:00'); d.setDate(d.getDate()+PAY_TERMS); return d.toISOString().slice(0,10); };
+const daysUntil = iso => Math.round((new Date(iso+'T00:00:00')-new Date(new Date().toISOString().slice(0,10)+'T00:00:00'))/86400000);
+const inRun = inv => PAYRUNS.find(r=>r.status!=='cancelled'&&r.invoices.includes(invKey(inv)));
+const readyInvoices = () => INVOICES.filter(i=>i.status==='approved'&&!inRun(i));
+const runNet = r => r.invoices.map(findInv).filter(Boolean).reduce((a,i)=>a+deductions(i).net,0);
+const dueBadge = iso => { const d=daysUntil(iso); return d<0?`<span class="text-[11px] font-bold px-2 py-0.5 rounded bg-red-600 text-white">متأخر ${fmtNum(-d)} يوم</span>`:d<=7?`<span class="text-[11px] font-bold px-2 py-0.5 rounded bg-amber-500 text-white">خلال ${fmtNum(d)} أيام</span>`:`<span class="text-[11px] text-slate-500">بعد ${fmtNum(d)} يوماً</span>`; };
+let RUN_SEL = new Set();
+function payBadge(st){ return `<span class="text-xs font-bold px-2.5 py-1 rounded-full ${PAY_STATUS[st].cls}">${PAY_STATUS[st].ar}</span>`; }
+
+PAGES.payments = () => {
+  const ready=readyInvoices(), canPay=['admin','reviewer'].includes(ME.role);
+  const ledger=CONTRACTS.map(c=>{ const inv=INVOICES.filter(i=>i.contract===c.id&&['approved','paid','archived'].includes(i.status)); const paid=inv.filter(i=>['paid','archived'].includes(i.status));
+    return {c, invoiced:inv.reduce((a,i)=>a+i.subtotal,0), paidNet:paid.reduce((a,i)=>a+deductions(i).net,0), retention:paid.reduce((a,i)=>a+deductions(i).retention,0), advTotal:c.value*c.advance/100, recovered:paid.reduce((a,i)=>a+deductions(i).advance,0)}; });
+  return `
+  <div class="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-4 gap-4 mb-6">
+    ${card('جاهز للدفع (صافي)', fmtMoney(ready.reduce((a,i)=>a+deductions(i).net,0)), `${fmtNum(ready.length)} فاتورة معتمدة خارج أي دفعة`,'brand')}
+    ${card('مستحق خلال ٧ أيام', fmtMoney(ready.filter(i=>daysUntil(dueDate(i))<=7).reduce((a,i)=>a+deductions(i).net,0)), `${fmtNum(ready.filter(i=>daysUntil(dueDate(i))<0).length)} فاتورة متأخرة`,'red')}
+    ${card('دفعات بانتظار الاعتماد', fmtNum(PAYRUNS.filter(r=>r.status==='pending_approval').length), fmtMoney(PAYRUNS.filter(r=>r.status==='pending_approval').reduce((a,r)=>a+runNet(r),0)),'amber')}
+    ${card('مدفوع هذا العام', fmtMoney(PAYRUNS.filter(r=>r.status==='paid').reduce((a,r)=>a+runNet(r),0)), `${fmtNum(PAYRUNS.filter(r=>r.status==='paid').length)} دفعة سداد`,'brand')}
+  </div>
+  ${section(`جاهز للدفع (${fmtNum(ready.length)})`, ready.length?`<div class="tbl-wrap"><table class="tbl w-full text-sm">
+    <thead><tr>${canPay?'<th></th>':''}<th>الفاتورة</th><th>مقاول الباطن</th><th>العقد</th><th>إشعار التسليم</th><th>الإجمالي</th><th>المحتجز</th><th>استرداد الدفعة المقدمة</th><th>الصافي المستحق</th><th>تاريخ الاستحقاق</th></tr></thead>
+    <tbody>${ready.map(i=>{const d=deductions(i), c=conOf(i.contract); return `<tr>
+      ${canPay?`<td><input type="checkbox" ${RUN_SEL.has(invKey(i))?'checked':''} onchange="this.checked?RUN_SEL.add('${invKey(i)}'):RUN_SEL.delete('${invKey(i)}');document.getElementById('run-btn').textContent='إنشاء دفعة سداد ('+fmtNum(RUN_SEL.size||${ready.length})+')'" class="w-4 h-4"></td>`:''}
+      <td class="font-bold text-brand-800 cursor-pointer" onclick="openInvoice('${invKey(i)}')">${i.id}</td><td>${subOf(i.sub).name}</td><td class="text-slate-500">${i.contract||'—'}</td>
+      <td>${(i.dn||[]).map(x=>`<button onclick="openDN('${x}')" class="text-xs font-bold text-brand-700 hover:underline">${x}</button>`).join(' ')||'—'}</td>
+      <td class="whitespace-nowrap">${fmtMoney(d.gross)}</td><td class="whitespace-nowrap text-red-700">− ${fmtMoney(d.retention)} <span class="text-[10px] text-slate-400">(${fmtPct(c.retention||0)})</span></td><td class="whitespace-nowrap text-red-700">− ${fmtMoney(d.advance)}</td>
+      <td class="font-extrabold whitespace-nowrap">${fmtMoney(d.net)}</td><td class="whitespace-nowrap">${dt(dueDate(i))} ${dueBadge(dueDate(i))}</td></tr>`;}).join('')}</tbody>
+    <tfoot><tr class="bg-slate-50 font-extrabold"><td colspan="${canPay?8:7}">إجمالي الصافي المستحق</td><td colspan="2">${fmtMoney(ready.reduce((a,i)=>a+deductions(i).net,0))}</td></tr></tfoot></table></div>
+    <div class="px-5 py-3 text-xs text-slate-500">المحتجز = نسبة العقد × المجموع قبل الضريبة · استرداد الدفعة المقدمة = نسبة العقد × المجموع قبل الضريبة حتى استرداد كامل الدفعة · الاستحقاق = تاريخ اعتماد الفاتورة + ${fmtNum(PAY_TERMS)} يوماً.</div>`
+    :'<div class="p-10 text-center text-slate-400 text-sm">لا توجد فواتير معتمدة بانتظار الدفع — تُدرج الفواتير هنا تلقائياً عند اعتمادها.</div>',
+    canPay&&ready.length?`<button id="run-btn" onclick="openNewRun()" class="${BTN_SM}">إنشاء دفعة سداد (${fmtNum(RUN_SEL.size||ready.length)})</button>`:'')}
+  <div class="mb-6"></div>
+  ${section('دفعات السداد', `<div class="tbl-wrap"><table class="tbl w-full text-sm"><thead><tr><th>الدفعة</th><th>التاريخ</th><th>الفواتير</th><th>الصافي</th><th>أعدّها</th><th>الحالة</th><th>مرجع البنك</th></tr></thead>
+    <tbody>${[...PAYRUNS].reverse().map(r=>`<tr class="cursor-pointer" onclick="openRun('${r.id}')"><td class="font-bold text-brand-800">${r.id}</td><td class="whitespace-nowrap text-slate-500">${dt(r.date)}</td><td>${r.invoices.join(' · ')}</td><td class="font-semibold whitespace-nowrap">${fmtMoney(runNet(r))}</td><td>${r.by}</td><td>${payBadge(r.status)}</td><td class="text-xs" dir="ltr">${r.bankRef||'—'}</td></tr>`).join('')}</tbody></table></div>`)}
+  <div class="mb-6"></div>
+  ${section('الالتزامات المالية لكل عقد', `<div class="tbl-wrap"><table class="tbl w-full text-sm"><thead><tr><th>العقد</th><th>مقاول الباطن</th><th>قيمة العقد</th><th>المفوتر (قبل الضريبة)</th><th>المدفوع (صافي)</th><th>المحتجز التراكمي</th><th>الدفعة المقدمة</th><th>المسترد منها</th><th>المتبقي للاسترداد</th></tr></thead>
+    <tbody>${ledger.map(l=>`<tr><td class="font-bold text-brand-800">${l.c.id}</td><td>${subOf(l.c.sub).name}</td><td class="whitespace-nowrap">${fmtMoney(l.c.value)}</td><td class="whitespace-nowrap">${fmtMoney(l.invoiced)}</td><td class="whitespace-nowrap">${fmtMoney(l.paidNet)}</td><td class="whitespace-nowrap">${fmtMoney(l.retention)} <span class="text-[10px] text-slate-400">(${fmtPct(l.c.retention)})</span></td><td class="whitespace-nowrap">${fmtMoney(l.advTotal)} <span class="text-[10px] text-slate-400">(${fmtPct(l.c.advance)})</span></td><td class="whitespace-nowrap">${fmtMoney(l.recovered)}</td><td class="whitespace-nowrap font-semibold">${fmtMoney(Math.max(l.advTotal-l.recovered,0))}</td></tr>`).join('')}</tbody></table></div>
+    <div class="px-5 py-3 text-xs text-slate-500">يُفرج عن المحتجز عند التسليم النهائي وفق العقد — يظهر هنا كالتزام تراكمي على الشركة.</div>`)}`;
+};
+function openNewRun(){
+  const ready=readyInvoices(), sel=ready.filter(i=>RUN_SEL.size?RUN_SEL.has(invKey(i)):true);
+  if(!sel.length) return toast('لا توجد فواتير محددة');
+  const r={id:`PAY-2026-${String(PAYRUNS.length+5).padStart(3,'0')}`, date:new Date().toISOString().slice(0,10), invoices:sel.map(invKey), status:'pending_approval', by:ME.name, events:[]};
+  PAYRUNS.push(r); RUN_SEL=new Set();
+  r.events.push(['إنشاء دفعة السداد',ME.name,nowStr(),`${fmtNum(sel.length)} فاتورة — صافي ${fmtMoney(runNet(r))}`]); logAudit('إنشاء دفعة سداد', r.id, `${sel.map(i=>i.id).join('، ')} — صافي ${fmtMoney(runNet(r))}`);
+  sel.forEach(i=>addEvent(i,'إدراج في دفعة سداد',r.id));
+  toast(`أُنشئت ${r.id} — بانتظار اعتماد المدير المالي`); go('payments'); openRun(r.id);
+}
+function openRun(id){
+  const r=findRun(id), invs=r.invoices.map(findInv).filter(Boolean), isAdmin=ME.role==='admin', canPay=['admin','reviewer'].includes(ME.role);
+  const bySub={}; invs.forEach(i=>{ (bySub[i.sub]=bySub[i.sub]||[]).push(i); });
+  showModal(mHead(`دفعة السداد ${r.id}`, `${dtBoth(r.date)} · أعدّها ${r.by} · ${fmtNum(invs.length)} فاتورة`) + `
+  <div class="mbody flex-1 overflow-y-auto p-6">
+    <div class="tbl-wrap mb-5"><table class="tbl w-full text-sm"><thead><tr><th>الفاتورة</th><th>مقاول الباطن</th><th>العقد</th><th>الإجمالي</th><th>المحتجز</th><th>استرداد الدفعة المقدمة</th><th>الصافي</th><th>الآيبان</th></tr></thead>
+      <tbody>${invs.map(i=>{const d=deductions(i);return `<tr><td class="font-bold text-brand-800 cursor-pointer" onclick="openInvoice('${invKey(i)}')">${i.id}</td><td>${subOf(i.sub).name}</td><td class="text-slate-500">${i.contract||'—'}</td><td class="whitespace-nowrap">${fmtMoney(d.gross)}</td><td class="whitespace-nowrap text-red-700">− ${fmtMoney(d.retention)}</td><td class="whitespace-nowrap text-red-700">− ${fmtMoney(d.advance)}</td><td class="font-extrabold whitespace-nowrap">${fmtMoney(d.net)}</td><td class="text-xs" dir="ltr">${subOf(i.sub).iban}</td></tr>`;}).join('')}</tbody>
+      <tfoot><tr class="bg-slate-50 font-extrabold"><td colspan="6">إجمالي التحويل</td><td colspan="2">${fmtMoney(runNet(r))}</td></tr></tfoot></table></div>
+    <div class="grid grid-cols-1 lg:grid-cols-2 gap-4">
+      <div class="border border-slate-200 rounded-2xl p-4 text-sm"><h4 class="font-extrabold text-brand-800 mb-2">مسار الدفعة</h4>
+        ${[['إعداد الدفعة',r.by,r.events[0]?.[2]||r.date,true],['اعتماد المدير المالي',r.approvedBy,r.approvedAt,!!r.approvedBy],['تأكيد التحويل البنكي',r.bankRef?r.by:null,r.paidAt,!!r.bankRef]].map(([t,who,at,ok],ix)=>`<div class="flex items-center gap-3 border rounded-xl px-3 py-2.5 mb-2 ${ok?'border-emerald-200 bg-emerald-50':'border-slate-200'}"><div class="w-7 h-7 rounded-full flex items-center justify-center text-xs font-extrabold ${ok?'bg-emerald-600 text-white':'bg-slate-200 text-slate-600'}">${ok?'✓':fmtNum(ix+1)}</div><div class="flex-1"><div class="font-bold">${t}</div><div class="text-xs text-slate-500">${ok?`${who||''} · <span dir="ltr">${at||''}</span>`:'—'}</div></div></div>`).join('')}
+        ${r.status==='pending_approval'&&isAdmin?`<button onclick="approveRun('${id}')" class="mt-2 px-4 py-2.5 rounded-xl bg-brand-800 text-white font-bold text-sm">اعتماد الدفعة</button>`:''}
+        ${r.status==='approved'&&canPay?`<div class="mt-3 flex flex-wrap gap-2 items-center"><input id="bankref" placeholder="مرجع التحويل البنكي — إلزامي" class="${INP}" style="max-width:16rem" dir="ltr"><button onclick="confirmPaid('${id}')" class="px-4 py-2.5 rounded-xl bg-brand-800 text-white font-bold text-sm">تأكيد التحويل وتحديث الفواتير إلى مدفوعة</button><span class="err text-[11px] text-red-600 font-bold"></span></div>`:''}
+        ${r.status==='paid'?`<div class="text-xs text-emerald-700 font-bold mt-2">✓ مدفوعة — مرجع البنك <span dir="ltr">${r.bankRef}</span> · ${dt(r.paidAt)}</div>`:''}</div>
+      <div class="border border-slate-200 rounded-2xl p-4 text-sm"><h4 class="font-extrabold text-brand-800 mb-2">إشعارات الدفع للموردين</h4>
+        ${Object.entries(bySub).map(([sid,list])=>`<div class="flex items-center justify-between border-b border-slate-100 py-2"><div><b>${subOf(sid).name}</b><div class="text-xs text-slate-500">${list.map(i=>i.id).join(' · ')} — ${fmtMoney(list.reduce((a,i)=>a+deductions(i).net,0))}</div></div><button onclick="openRemittance('${id}','${sid}')" class="text-xs font-bold text-brand-700 border border-brand-200 bg-brand-50 rounded-lg px-3 py-1.5">إشعار الدفع</button></div>`).join('')}
+        <div class="text-xs text-slate-500 mt-3">يُصدَّر ملف التحويلات بصيغة البنك (SARIE/ACH) عند الاعتماد، ويُرسل إشعار الدفع لكل مورد بالبريد عند التأكيد.</div></div>
+    </div></div>
+  <div class="mfoot px-6 py-4 border-t border-slate-200 flex items-center justify-between flex-wrap gap-2 shrink-0"><div>${payBadge(r.status)}</div><div class="flex gap-2"><button onclick="closeModal()" class="px-4 py-2.5 rounded-xl border border-slate-300 font-bold text-sm">إغلاق</button>${r.status==='pending_approval'&&canPay?`<button onclick="cancelRun('${id}')" class="px-4 py-2.5 rounded-xl border border-slate-300 font-bold text-sm">إلغاء الدفعة</button>`:''}</div></div>`, 'w-full max-w-6xl h-[94vh]');
+}
+function approveRun(id){ const r=findRun(id); r.status='approved'; r.approvedBy=ME.name; r.approvedAt=nowStr(); r.events.push(['اعتماد المدير المالي',ME.name,nowStr(),'']); logAudit('اعتماد دفعة سداد', r.id, `صافي ${fmtMoney(runNet(r))}`); toast('اعتُمدت الدفعة — بانتظار تأكيد التحويل'); openRun(id); }
+function confirmPaid(id){
+  const r=findRun(id), ref=document.getElementById('bankref').value.trim(); if(!ref) return document.querySelector('#modal-box .err').textContent='مرجع التحويل إلزامي';
+  r.status='paid'; r.bankRef=ref; r.paidAt=new Date().toISOString().slice(0,10); r.events.push(['تأكيد التحويل',ME.name,nowStr(),ref]);
+  r.invoices.map(findInv).filter(Boolean).forEach(i=>{ i.status='paid'; i.paidRun=r.id; addEvent(i,'تسجيل السداد',`${r.id} — ${ref}`); });
+  logAudit('تأكيد سداد', r.id, `${r.invoices.join('، ')} — ${ref}`); toast('سُجِّل السداد وتحوّلت الفواتير إلى مدفوعة'); openRun(id);
+}
+function cancelRun(id){ const r=findRun(id); r.status='cancelled'; r.events.push(['إلغاء الدفعة',ME.name,nowStr(),'']); logAudit('إلغاء دفعة سداد', r.id, ''); toast('أُلغيت الدفعة — عادت الفواتير إلى جاهز للدفع'); closeModal(); go('payments'); }
+function openRemittance(runId, sid){
+  const r=findRun(runId), sub=subOf(sid), invs=r.invoices.map(findInv).filter(i=>i&&i.sub===sid), tot=invs.reduce((a,i)=>a+deductions(i).net,0);
+  showModal(mHead(`إشعار دفع — ${sub.name}`, `${r.id} · ${dtBoth(r.date)}`) + `<div class="mbody flex-1 overflow-y-auto bg-slate-200 p-6"><div class="doc-page rounded-lg p-8 mx-auto max-w-3xl text-sm">
+    <div class="flex justify-between items-start border-b-2 border-slate-800 pb-4 mb-5"><div><div class="font-extrabold text-lg">اتحاد العرين للمقاولات</div><div class="text-xs text-slate-500" dir="ltr">AL AREEN UNION CONTRACTING CO.</div></div><div class="text-left"><div class="font-extrabold text-xl">إشعار دفع</div><div class="text-xs text-slate-500">REMITTANCE ADVICE</div><div class="font-bold mt-2" dir="ltr">${r.id}</div></div></div>
+    <div class="grid grid-cols-2 gap-6 mb-5 text-xs"><div><div class="font-bold text-slate-500 mb-1">المستفيد</div><div class="font-extrabold text-sm">${sub.name}</div><div>الرقم الضريبي: ${sub.vat}</div><div>الآيبان: <span dir="ltr">${sub.iban}</span></div></div><div><div class="font-bold text-slate-500 mb-1">التحويل</div><div>${r.bankRef?`مرجع البنك: <b dir="ltr">${r.bankRef}</b> · ${dt(r.paidAt)}`:'بانتظار التنفيذ'}</div><div>طريقة الدفع: حوالة بنكية</div></div></div>
+    <table class="w-full text-xs border border-slate-300 mb-4"><thead><tr class="bg-slate-100"><th class="border border-slate-300 p-1.5">الفاتورة</th><th class="border border-slate-300 p-1.5">العقد</th><th class="border border-slate-300 p-1.5">الإجمالي</th><th class="border border-slate-300 p-1.5">المحتجز</th><th class="border border-slate-300 p-1.5">استرداد الدفعة المقدمة</th><th class="border border-slate-300 p-1.5">الصافي</th></tr></thead>
+      <tbody>${invs.map(i=>{const d=deductions(i);return `<tr><td class="border border-slate-300 p-1.5 text-center">${i.id}</td><td class="border border-slate-300 p-1.5 text-center">${i.contract}</td><td class="border border-slate-300 p-1.5 text-center">${fmtNum(d.gross)}</td><td class="border border-slate-300 p-1.5 text-center">${fmtNum(d.retention)}</td><td class="border border-slate-300 p-1.5 text-center">${fmtNum(d.advance)}</td><td class="border border-slate-300 p-1.5 text-center font-bold">${fmtNum(d.net)}</td></tr>`;}).join('')}</tbody></table>
+    <div class="flex justify-end"><table class="text-xs"><tr class="border-t border-slate-400"><td class="pl-8 py-1 font-extrabold">إجمالي المحوَّل</td><td class="font-extrabold">${fmtMoney(tot)}</td></tr></table></div>
+    <div class="text-[10px] text-slate-400 mt-5">المحتجز يُفرج عنه عند التسليم النهائي وفق شروط العقد · استرداد الدفعة المقدمة وفق نسبة العقد حتى استردادها بالكامل.</div></div></div>
+  <div class="mfoot px-6 py-4 border-t border-slate-200 flex justify-between gap-2 flex-wrap shrink-0"><button onclick="openRun('${runId}')" class="px-4 py-2.5 rounded-xl border border-slate-300 font-bold text-sm">→ العودة إلى الدفعة</button><div class="flex gap-2"><button onclick="window.print()" class="px-4 py-2.5 rounded-xl border border-slate-300 font-bold text-sm">طباعة / PDF</button><button onclick="toast('أُرسل إشعار الدفع إلى ${sub.name}')" class="px-5 py-2.5 rounded-xl bg-brand-800 text-white font-bold text-sm">إرسال للمورد</button></div></div>`, 'w-full max-w-5xl h-[94vh]');
 }
 
 /* ═══════════════════════════════════════════════════════════════════════════
