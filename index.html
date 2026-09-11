@@ -2798,7 +2798,7 @@ function awardLive(id){ const pr=findPR(id), best=commRows(pr)[0], sel=document.
 
 /* ── actions ── */
 function submitPR(id){ const pr=findPR(id); pr.status='pr_approval'; prEvent(pr,'إرسال للاعتماد'); toast('أُرسل الطلب لاعتماد مدير المشتريات'); openPR(id,'req'); }
-function approvePR(id){ const pr=findPR(id); pr.status='approved'; prEvent(pr,'اعتماد الطلب'); toast('اعتُمد الطلب — الخطوة التالية إرسال طلب عروض الأسعار'); openPR(id,'quotes'); }
+function approvePR(id){ const pr=findPR(id); pr.status='approved'; prEvent(pr,'اعتماد الطلب'); toast('اعتُمد الطلب — الخطوة التالية تسجيل طلب عروض الأسعار'); openPR(id,'quotes'); }
 function returnPR(id){ const pr=findPR(id); pr.status='draft'; prEvent(pr,'إعادة الطلب للتعديل'); toast('أُعيد الطلب إلى مقدمه'); openPR(id,'req'); }
 function sendRfq(id){
   const pr=findPR(id), f=document.getElementById('rfq-form'), vs=[...f.querySelectorAll('input[type=checkbox]:checked')].map(i=>i.value), close=f.querySelector('[name=close]').value;
